@@ -25,7 +25,7 @@ new LocalNamespace( options: LocalNamespaceOptions )
 interface LocalNamespaceOptions {
   /// 任意な一意な文字列。他のローカル空間と識別するために使います。
   id?: string
-  
+
   /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
   scale: number
 
@@ -55,12 +55,12 @@ interface LocalNamespaceOptions {
 `XYZObject` で指定された座標がローカル空間により外の場合、例外が発生します。
 
 
-##### `.spacesFromGeoJSON(zoom: number, input: GeoJSON)` -> `LocalSpatialId[]`
+##### `.spacesFromGeoJSON(zoom: number, input: GeoJSON.Geometry)` -> `LocalSpatialId[]`
 
 * GeoJSON Feature がインプットとし、内包する指定のズームレベルのローカル空間IDを算出します。
 * 基準点の設定が未設定の場合、例外が発生します。
 
-##### `.boundingSpaceFromGeoJSON(input: GeoJSON)` -> `LocalSpatialId`
+##### `.boundingSpaceFromGeoJSON(input: GeoJSON.Geometry)` -> `LocalSpatialId`
 
 * GeoJSON Feature がインプットとし、内包する最小のローカル空間IDを算出します。
 * 基準点の設定が未設定の場合、例外が発生します。
@@ -119,6 +119,7 @@ interface LocalNamespaceOptions {
 
 ![north](https://user-images.githubusercontent.com/309946/168221234-b03809ef-6c69-442b-98d3-583b4391108e.png)
 
+* こちらの東西南北はローカル座標系内の方位となります。
 * パラメータがない場合は、現在の空間オブジェクトの隣のオブジェクトを返す
 * パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
 
@@ -146,7 +147,7 @@ space.move({x: 1, y: 5, f: -1})
 
 * 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
 
-#### `.contains(input: LocalSpatialId | GeoJSON)` -> `bool`
+#### `.contains(input: LocalSpatialId | GeoJSON.Geometry)` -> `bool`
 
 * 指定されたローカル空間IDまたは任意なGeoJSONが、指定されたボクセル内に含まれるかどうかを判定して bool 値を返す。
 * input の ローカル空間ID が違うローカル空間で作られたものの場合、例外が発生します。
@@ -162,7 +163,7 @@ space.move({x: 1, y: 5, f: -1})
 * 現在の空間オブジェクトを内包できるグローバル空間IDを、指定のズームレベルのグローバル空間オブジェクトを配列で返します。
 * 基準点の設定が未設定の場合、例外が発生します。
 
-#### `.toGeoJSON()` -> `GeoJSON`
+#### `.toGeoJSON()` -> `GeoJSON.Geometry`
 
 * 現在の空間オブジェクトをGeoJSONとして出力する（２次元）
 * 基準点の設定が未設定の場合、例外が発生します。

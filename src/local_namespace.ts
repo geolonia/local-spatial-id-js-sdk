@@ -1,3 +1,4 @@
+import { ConversionNotPossibleError } from "./lib/errors";
 import { LocalSpatialId, LocalSpatialIdInput } from "./local_spatial_id";
 
 export type LocalNamespaceOptions = {
@@ -52,10 +53,16 @@ export class LocalNamespace {
   }
 
   spacesFromGeoJSON(zoom: number, input: GeoJSON.Geometry): LocalSpatialId[] {
+    if (!this.origin) {
+      throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
+    }
     throw new Error("Not implemented yet");
   }
 
   boundingSpaceFromGeoJSON(input: GeoJSON.Geometry): LocalSpatialId {
+    if (!this.origin) {
+      throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
+    }
     throw new Error("Not implemented yet");
   }
 }
