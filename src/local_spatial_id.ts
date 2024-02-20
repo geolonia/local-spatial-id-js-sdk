@@ -113,10 +113,11 @@ export class LocalSpatialId {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
     const meters = tile2meters(this.namespace.scale, this.zfxy.z);
-    const x0 = this.zfxy.x * meters;
-    const y0 = this.zfxy.y * meters;
-    const x1 = (this.zfxy.x + 1) * meters;
-    const y1 = (this.zfxy.y + 1) * meters;
+    // The origin point is at the center of the tile, so we need to adjust the bounding box by half the tile size.
+    const x0 = (this.zfxy.x * meters) - (meters / 2);
+    const y0 = (this.zfxy.y * meters) - (meters / 2);
+    const x1 = ((this.zfxy.x + 1) * meters) - (meters / 2);
+    const y1 = ((this.zfxy.y + 1) * meters) - (meters / 2);
     const p0 = this.namespace.georeferencer.transform({ x: x0, y: y0 });
     const p1 = this.namespace.georeferencer.transform({ x: x1, y: y1 });
     return [p0.x, p0.y, p1.x, p1.y];

@@ -22,7 +22,10 @@ describe('LocalSpatialId', () => {
     });
     const space = namespace.space('/0/0/0/0');
     const bbox = space.toWGS84BBox();
-    const referenceBbox = [ 139.69172572944066, 35.68950097945576, 139.8023281380773, 35.77957756239187 ];
+
+    // a bounding box of 10km2, with the center at 東京都庁
+    // http://bboxfinder.com/#35.644424,139.636518,35.734552,139.746996
+    const referenceBbox = [ 139.63651780159154, 35.644424126412915, 139.7469957955975, 35.7345521481874 ];
     assert.deepStrictEqual(bbox, referenceBbox);
   });
 });

@@ -12,8 +12,11 @@ export type LocalNamespaceOptions = {
   name?: string
   description?: string
 
-  /// ローカル空間をグローバル空間とマッピングする場合、基準点をしていしなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
-  /// 設定する場合、最低でも `latitude` と `longitude` は必須です。
+  /**
+   * ローカル空間をグローバル空間とマッピングする場合、基準点をしていしなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
+   * 設定する場合、最低でも `latitude` と `longitude` は必須です。
+   * 基準点を設定する場合、基準点は空間の中央点として扱われます。
+   **/
   origin_latitude?: number
   origin_longitude?: number
   origin_altitude?: number
@@ -51,8 +54,7 @@ export class LocalNamespace {
 
       this.georeferencer = new OriginGeodesicTransformer(
         { x: this.origin.longitude, y: this.origin.latitude },
-        1, // we will always convert to meters before transforming
-        this.origin.angle
+        this.origin.angle,
       );
     }
   }

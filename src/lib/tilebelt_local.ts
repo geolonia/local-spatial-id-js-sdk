@@ -5,3 +5,7 @@
 export function tile2meters(scale: number, z: number): number {
   return scale / Math.pow(2, z);
 }
+
+/**
+ * Calculate the
+ */
