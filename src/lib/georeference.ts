@@ -1,70 +1,60 @@
-import { mat3 } from 'gl-matrix'
+import geodesic from 'geographiclib-geodesic';
 
 export type Point = { x: number, y: number }
-export type GCP = { src: Point, dest: Point }
 
-export interface MatrixTransformer {}
+export type TransformOptions = {
+  inverse?: boolean
+}
+export interface CoordinateTransformer {
+  transform(point: Point, options?: TransformOptions): Point
+}
+
+/**
+ * TODO: Affine translation.
+ * GCPを使って座標系変換を使う場合、こちらのクラスを実装してください。
+ */
+
+
 
 /**
  * Translate-scale-vector transformation. Requires the origin point, scale factor, and angle (in degrees).
+ * The origin point is in WGS84 coordinates.
+ * The scale factor is defined as the number of meters in the destination space per unit in the source space.
+ * The angle is in degrees, and is the angle of rotation around the origin point. Clockwise is positive, starting at 0, meaning north.
  */
-export class TranslateScaleVectorTransform implements MatrixTransformer {
-  private origin: Point;
-  private matrix: mat3;
+export class OriginGeodesicTransformer implements CoordinateTransformer {
+  private origin: Point; // WGS84 coordinates
+  private scale: number; // meters
+  private angle: number; // degrees
+  private geodesic: geodesic.GeodesicClass;
 
   constructor(origin: Point, scale: number, angleDegrees: number) {
     this.origin = origin;
-
-    const angleRadians = (angleDegrees * Math.PI) / 180;
-
-    // Translation to origin matrix
-    const toOrigin = mat3.fromValues( 1, 0, 0,
-                                      0, 1, 0,
-                                      -this.origin.x, -this.origin.y, 1);
-
-    // Translation back (inverse of toOrigin)
-    const fromOrigin = mat3.fromValues( 1, 0, 0,
-                                        0, 1, 0,
-                                        this.origin.x, this.origin.y, 1);
-
-
-    // Rotation matrix (https://en.wikipedia.org/wiki/Rotation_matrix)
-    const rotation = mat3.fromValues(
-      Math.cos(angleRadians), -Math.sin(angleRadians), 0,
-      Math.sin(angleRadians), Math.cos(angleRadians),  0,
-      0,                      0,                      1
-    );
-
-    // Scaling matrix
-    const scaling = mat3.fromValues(scale, 0,     0,
-                                    0,     scale, 0,
-                                    0,     0,     1);
-
-    // Combine transformations (translate to origin -> rotate -> scale)
-    this.matrix = mat3.create();
-    mat3.multiply(this.matrix, fromOrigin, scaling);
-    mat3.multiply(this.matrix, this.matrix, rotation);
-    // mat3.multiply(this.matrix, this.matrix, toOrigin);
+    this.scale = scale;
+    this.angle = angleDegrees;
+    this.geodesic = geodesic.Geodesic.WGS84;
   }
 
-  transform(point: Point, option: { inverse?: boolean } = {}): Point {
-    const inputMat3 = mat3.create()
-    const outputMat3 = mat3.create()
-    mat3.set(inputMat3, ...[
-      point.x, 0, 0,
-      point.y, 0, 0,
-      1,       0, 0,
-    ])
-    mat3.transpose(inputMat3, inputMat3)
-
-    const lefter_multiplier = mat3.create()
-    mat3.copy(lefter_multiplier, this.matrix)
-    if(option.inverse) {
-      mat3.invert(lefter_multiplier, lefter_multiplier)
+  transform(point: Point, option: TransformOptions = {}): Point {
+    // 1. Calculate the length and angle of the vector from the source origin to the input point, in source coordinates.
+    // Because we're in cartesian coordinates, we can just calculate the pythonagorean distance between the two points.
+    const srcPointLengthFromSrcOrgin = Math.sqrt(point.x * point.x + point.y * point.y);
+    let srcPointAngleFromSrcOrgin = 90 - Math.atan2(point.y, point.x) * (180 / Math.PI);
+    if (srcPointAngleFromSrcOrgin < 0) {
+      srcPointAngleFromSrcOrgin += 360;
     }
-    mat3.multiply(outputMat3, lefter_multiplier, inputMat3)
-    const x = outputMat3[0]
-    const y = outputMat3[1]
-    return { x, y };
+
+    // 2. Add the angle of rotation to the angle of the vector.
+    const totalRotationAngle = srcPointAngleFromSrcOrgin + this.angle;
+    const normalizedRotationAngle = totalRotationAngle % 360;
+
+    // 3. Calculate the length in meters of the vector length in the source space.
+    const srcPointLengthInMeters = srcPointLengthFromSrcOrgin * this.scale;
+
+    // 4. Use the geodesic library to calculate the destination point from the origin point, using the length and angle of the vector.
+    const destinationPoint = this.geodesic.Direct(this.origin.y, this.origin.x, normalizedRotationAngle, srcPointLengthInMeters);
+
+    // 5. Return the destination point.
+    return { x: destinationPoint.lon2, y: destinationPoint.lat2 };
   }
 }

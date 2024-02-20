@@ -1,4 +1,5 @@
 import { ConversionNotPossibleError } from "./lib/errors";
+import { CoordinateTransformer, OriginGeodesicTransformer } from "./lib/georeference";
 import { LocalSpatialId, LocalSpatialIdInput } from "./local_spatial_id";
 
 export type LocalNamespaceOptions = {
@@ -33,6 +34,8 @@ export class LocalNamespace {
   description?: string
   origin?: OriginSettings
 
+  georeferencer?: CoordinateTransformer;
+
   constructor(options: LocalNamespaceOptions) {
     this.id = options.id;
     this.scale = options.scale;
@@ -44,7 +47,13 @@ export class LocalNamespace {
         longitude: options.origin_longitude,
         altitude: options.origin_altitude || 0,
         angle: options.origin_angle || 0
-      }
+      };
+
+      this.georeferencer = new OriginGeodesicTransformer(
+        { x: this.origin.longitude, y: this.origin.latitude },
+        1, // we will always convert to meters before transforming
+        this.origin.angle
+      );
     }
   }
 

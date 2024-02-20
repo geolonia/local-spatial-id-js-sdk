@@ -1,9 +1,12 @@
 import type { LocalNamespace } from "./local_namespace";
 
+import bboxPolygon from "@turf/bbox-polygon";
+
 import { LngLatWithAltitude } from "./lib/types";
 import { ZFXYTile, calculateZFXY, getChildren, getParent, isZFXYTile, parseZFXYString, zfxyWraparound } from "./lib/zfxy";
 import { generateTilehash, parseZFXYTilehash } from "./lib/zfxy_tilehash";
 import { ConversionNotPossibleError } from "./lib/errors";
+import { tile2meters } from "./lib/tilebelt_local";
 
 export type LocalSpatialIdInput = LngLatWithAltitude | ZFXYTile | string;
 
@@ -105,11 +108,23 @@ export class LocalSpatialId {
     throw new Error("Not implemented yet");
   }
 
-  toGeoJSON() {
-    if (!this.namespace.origin) {
+  toWGS84BBox(): [number, number, number, number] {
+    if (!this.namespace.georeferencer) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
-    throw new Error("Not implemented yet");
+    const meters = tile2meters(this.namespace.scale, this.zfxy.z);
+    const x0 = this.zfxy.x * meters;
+    const y0 = this.zfxy.y * meters;
+    const x1 = (this.zfxy.x + 1) * meters;
+    const y1 = (this.zfxy.y + 1) * meters;
+    const p0 = this.namespace.georeferencer.transform({ x: x0, y: y0 });
+    const p1 = this.namespace.georeferencer.transform({ x: x1, y: y1 });
+    return [p0.x, p0.y, p1.x, p1.y];
+  }
+
+  toGeoJSON(): GeoJSON.Polygon {
+    const bbox = this.toWGS84BBox();
+    return bboxPolygon(bbox).geometry;
   }
 
   private _regenerateAttributesFromZFXY() {
