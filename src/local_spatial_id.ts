@@ -25,15 +25,11 @@ export class LocalSpatialId {
       let zfxy = parseZFXYString(input) || parseZFXYTilehash(input);
       if (zfxy) {
         this.zfxy = zfxy;
-        this._regenerateAttributesFromZFXY();
       } else {
         throw new Error(`parse ZFXY failed with input: ${input}`);
       }
-      return;
     } else if (isZFXYTile(input)) {
       this.zfxy = input;
-      this._regenerateAttributesFromZFXY();
-      return;
     } else {
       this.zfxy = calculateZFXY({
         ...input,
