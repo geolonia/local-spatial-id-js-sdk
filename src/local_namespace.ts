@@ -4,6 +4,7 @@ import { LocalSpatialId, LocalSpatialIdInput } from "./local_spatial_id";
 
 export type LocalNamespaceOptions = {
   /// 任意な一意な文字列。他のローカル空間と識別するために使います。
+  /// 存在しない場合は、ランダムなUUIDで生成されます。
   id?: string
 
   /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
@@ -31,7 +32,7 @@ type OriginSettings = {
 }
 
 export class LocalNamespace {
-  id?: string
+  id: string
   scale: number
   name?: string
   description?: string
@@ -40,7 +41,7 @@ export class LocalNamespace {
   georeferencer?: CoordinateTransformer;
 
   constructor(options: LocalNamespaceOptions) {
-    this.id = options.id;
+    this.id = options.id ?? crypto.randomUUID();
     this.scale = options.scale;
     this.name = options.name;
     this.description = options.description;

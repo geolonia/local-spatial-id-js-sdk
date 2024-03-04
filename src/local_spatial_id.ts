@@ -1,6 +1,7 @@
 import type { LocalNamespace } from "./local_namespace";
 
 import bboxPolygon from "@turf/bbox-polygon";
+import booleanContains from "@turf/boolean-contains";
 
 import { LngLatWithAltitude } from "./lib/types";
 import { ZFXYTile, calculateZFXY, getChildren, getParent, isZFXYTile, parseZFXYString, zfxyWraparound } from "./lib/zfxy";
@@ -91,13 +92,30 @@ export class LocalSpatialId {
   }
 
   contains(input: LocalSpatialId | GeoJSON.Geometry) {
-    throw new Error("Not implemented yet");
+    if (input instanceof LocalSpatialId) {
+      if (input.namespace.id && this.namespace.id && input.namespace.id !== this.namespace.id) {
+        return false;
+      }
+      const theirTilehash = input.tilehash;
+      return theirTilehash.startsWith(this.tilehash);
+    }
+    // this is a GeoJSON.Geometry
+
+    // Get the bounding box of our geometry
+    const bbox = this.toWGS84BBox();
+
+    // Check if the input geometry is within our bounding box
+    if (input.type === 'GeometryCollection')
+      throw new Error("GeometryCollection is not supported");
+
+    return booleanContains(bboxPolygon(bbox), input);
   }
 
   toContainingGlobalSpatialId() {
     if (!this.namespace.origin) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
+
     throw new Error("Not implemented yet");
   }
 
@@ -105,6 +123,7 @@ export class LocalSpatialId {
     if (!this.namespace.origin) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
+
     throw new Error("Not implemented yet");
   }
 

@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@turf/bbox-polygon": "^6.5.0",
+    "@turf/boolean-contains": "^6.5.0",
     "geographiclib-geodesic": "^2.0.0",
     "gl-matrix": "^3.4.3"
   }
