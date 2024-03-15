@@ -1,15 +1,18 @@
 import type { LocalNamespace } from "./local_namespace";
 
+import SpatialId from "@spatial-id/javascript-sdk";
+
 import bboxPolygon from "@turf/bbox-polygon";
 import booleanContains from "@turf/boolean-contains";
 
-import { LngLatWithAltitude } from "./lib/types";
-import { ZFXYTile, calculateZFXY, getChildren, getParent, isZFXYTile, parseZFXYString, zfxyWraparound } from "./lib/zfxy";
+import { XYPointWithAltitude } from "./lib/types";
+import { ZFXYTile, getChildren, getParent, isZFXYTile, parseZFXYString, zfxyWraparound } from "./lib/zfxy";
 import { generateTilehash, parseZFXYTilehash } from "./lib/zfxy_tilehash";
 import { ConversionNotPossibleError } from "./lib/errors";
-import { tile2meters } from "./lib/tilebelt_local";
+import { tile2meters, calculateLocalZFXY } from "./lib/tilebelt_local";
+import { BBox3D, bboxToTile, xyfzTileAryToObj } from "./lib/tilebelt";
 
-export type LocalSpatialIdInput = LngLatWithAltitude | ZFXYTile | string;
+export type LocalSpatialIdInput = XYPointWithAltitude | BBox3D | ZFXYTile | string;
 
 const DEFAULT_ZOOM = 25 as const;
 
@@ -35,10 +38,11 @@ export class LocalSpatialId {
     } else if (isZFXYTile(input)) {
       this.zfxy = input;
     } else {
-      this.zfxy = calculateZFXY({
-        ...input,
-        zoom: (typeof zoom !== 'undefined') ? zoom : DEFAULT_ZOOM,
-      });
+      this.zfxy = calculateLocalZFXY(
+        this.namespace.scale,
+        input,
+        (typeof zoom !== 'undefined') ? zoom : DEFAULT_ZOOM,
+      );
     }
 
     this._regenerateAttributesFromZFXY();
@@ -111,26 +115,22 @@ export class LocalSpatialId {
     return booleanContains(bboxPolygon(bbox), input);
   }
 
-  toContainingGlobalSpatialId() {
-    if (!this.namespace.origin) {
-      throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
-    }
-
-    throw new Error("Not implemented yet");
+  toContainingGlobalSpatialId(): SpatialId.Space {
+    const bbox = this.toWGS84BBox();
+    const xyzTile = bboxToTile(bbox);
+    return new SpatialId.Space(xyfzTileAryToObj(xyzTile));
   }
 
   toGlobalSpatialIds(zoom: number) {
-    if (!this.namespace.origin) {
-      throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
-    }
-
+    const _bbox = this.toWGS84BBox();
     throw new Error("Not implemented yet");
   }
 
-  toWGS84BBox(): [number, number, number, number] {
+  toWGS84BBox(): BBox3D {
     if (!this.namespace.georeferencer) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
+
     const meters = tile2meters(this.namespace.scale, this.zfxy.z);
     // The origin point is at the center of the tile, so we need to adjust the bounding box by half the tile size.
     const x0 = (this.zfxy.x * meters) - (meters / 2);
@@ -139,7 +139,9 @@ export class LocalSpatialId {
     const y1 = ((this.zfxy.y + 1) * meters) - (meters / 2);
     const p0 = this.namespace.georeferencer.transform({ x: x0, y: y0 });
     const p1 = this.namespace.georeferencer.transform({ x: x1, y: y1 });
-    return [p0.x, p0.y, p1.x, p1.y];
+    const f0 = this.zfxy.f * this.namespace.scale;
+    const f1 = (this.zfxy.f + 1) * this.namespace.scale;
+    return [p0.x, p0.y, f0, p1.x, p1.y, f1];
   }
 
   toGeoJSON(): GeoJSON.Polygon {

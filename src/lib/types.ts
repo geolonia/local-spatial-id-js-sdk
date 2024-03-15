@@ -8,3 +8,9 @@ export type LngLatWithAltitude = {
 }
 
 export type LngLat = {lng: number, lat: number};
+
+export type XYPointWithAltitude = {
+  x: number
+  y: number
+  alt?: number
+}

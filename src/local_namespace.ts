@@ -1,6 +1,9 @@
 import { ConversionNotPossibleError } from "./lib/errors";
 import { CoordinateTransformer, OriginGeodesicTransformer } from "./lib/georeference";
+import { BBox3D } from "./lib/tilebelt";
 import { LocalSpatialId, LocalSpatialIdInput } from "./local_spatial_id";
+
+import turfBBox from "@turf/bbox";
 
 export type LocalNamespaceOptions = {
   /// 任意な一意な文字列。他のローカル空間と識別するために使います。
@@ -72,9 +75,18 @@ export class LocalNamespace {
   }
 
   boundingSpaceFromGeoJSON(input: GeoJSON.Geometry): LocalSpatialId {
-    if (!this.origin) {
+    if (!this.georeferencer) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
-    throw new Error("Not implemented yet");
+    // Get the bounding box of the input geometry
+    const bbox = turfBBox(input);
+
+    // Convert the bounding box from WGS84 to the local space
+    const nw = this.georeferencer.transformInverse({ x: bbox[0], y: bbox[1] });
+    const se = this.georeferencer.transformInverse({ x: bbox[2], y: bbox[3] });
+    const localBBox3D: BBox3D = [nw.x, nw.y, 0, se.x, se.y, 0];
+
+    // Convert the bounding box to a local spatial ID
+    return new LocalSpatialId(this, localBBox3D);
   }
 }

@@ -2,11 +2,9 @@ import geodesic from 'geographiclib-geodesic';
 
 export type Point = { x: number, y: number }
 
-export type TransformOptions = {
-  inverse?: boolean
-}
 export interface CoordinateTransformer {
-  transform(point: Point, options?: TransformOptions): Point
+  transform(point: Point): Point
+  transformInverse(point: Point): Point
 }
 
 /**
@@ -36,10 +34,9 @@ export class OriginGeodesicTransformer implements CoordinateTransformer {
    * Transform a point from the local space to the WGS84 space.
    *
    * @param point Point in meters from the origin point.
-   * @param option
    * @returns A WGS84 point in degrees.
    */
-  transform(point: Point, option: TransformOptions = {}): Point {
+  transform(point: Point): Point {
     // 1. Calculate the length and angle of the vector from the source origin to the input point, in meters.
     // Because we're in cartesian coordinates, we can just calculate the pythonagorean distance between the two points.
     const srcPointLengthFromSrcOrgin = Math.sqrt(point.x * point.x + point.y * point.y);
@@ -57,5 +54,31 @@ export class OriginGeodesicTransformer implements CoordinateTransformer {
 
     // 4. Return the destination point.
     return { x: destinationPoint.lon2, y: destinationPoint.lat2 };
+  }
+
+  /**
+   * Transform a point from the WGS84 space to the local space.
+   *
+   * @param point A WGS84 point in degrees.
+   * @returns A point in meters from the origin point.
+   */
+  transformInverse(point: Point): Point {
+    // 1. Use the geodesic library to calculate the length and angle of the vector from the origin point to the input point.
+    const geodesicResult = this.geodesic.Inverse(this.origin.y, this.origin.x, point.y, point.x);
+
+    // 2. Subtract the angle of rotation from the angle of the vector.
+    const srcPointAngleFromSrcOrgin = geodesicResult.azi1;
+    const totalRotationAngle = srcPointAngleFromSrcOrgin - this.angle;
+    const normalizedRotationAngle = totalRotationAngle % 360;
+
+    // 3. Convert the angle to radians.
+    const angleInRadians = normalizedRotationAngle * (Math.PI / 180);
+
+    // 4. Use the length and angle of the vector to calculate the destination point from the origin point.
+    const x = geodesicResult.s12 * Math.cos(angleInRadians);
+    const y = geodesicResult.s12 * Math.sin(angleInRadians);
+
+    // 5. Return the destination point.
+    return { x, y };
   }
 }
