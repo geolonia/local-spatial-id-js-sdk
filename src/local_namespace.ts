@@ -1,6 +1,7 @@
 import { ConversionNotPossibleError } from "./lib/errors";
 import { CoordinateTransformer, OriginGeodesicTransformer } from "./lib/georeference";
 import { BBox3D } from "./lib/tilebelt";
+import { getChildrenAtZoom } from "./lib/zfxy";
 import { LocalSpatialId, LocalSpatialIdInput } from "./local_spatial_id";
 
 import turfBBox from "@turf/bbox";
@@ -71,7 +72,17 @@ export class LocalNamespace {
     if (!this.origin) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
-    throw new Error("Not implemented yet");
+    // this is a little more complicated than calculating the bounding box.
+    // first, get the bounding local space of the input geometry, so we know the range of local spaces we need to cover.
+    const boundingSpace = this.boundingSpaceFromGeoJSON(input);
+    // now, calculate the tiles at requested zoom level that cover the bounding space.
+    const coveringSpaces = getChildrenAtZoom(zoom, boundingSpace.zfxy).map((tile) => new LocalSpatialId(this, tile));
+    // now, perform a intersects check on each of the covering spaces to see if they actually contain the input geometry.
+    return coveringSpaces.filter((space) => {
+      const intersects = space.intersects(input);
+      console.log(`Space ${space.zfxyStr} intersects input: ${intersects}`)
+      return intersects;
+    });
   }
 
   boundingSpaceFromGeoJSON(input: GeoJSON.Geometry): LocalSpatialId {

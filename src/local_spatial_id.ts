@@ -4,13 +4,14 @@ import SpatialId from "@spatial-id/javascript-sdk";
 
 import bboxPolygon from "@turf/bbox-polygon";
 import booleanContains from "@turf/boolean-contains";
+import booleanIntersects from "@turf/boolean-intersects";
 
 import { XYPointWithAltitude } from "./lib/types";
-import { ZFXYTile, getChildren, getParent, isZFXYTile, parseZFXYString, zfxyWraparound } from "./lib/zfxy";
+import { ZFXYTile, getChildren, getChildrenAtZoom, getParent, isZFXYTile, parseZFXYString, zfxyWraparound } from "./lib/zfxy";
 import { generateTilehash, parseZFXYTilehash } from "./lib/zfxy_tilehash";
 import { ConversionNotPossibleError } from "./lib/errors";
 import { tile2meters, calculateLocalZFXY } from "./lib/tilebelt_local";
-import { BBox3D, bboxToTile, xyfzTileAryToObj } from "./lib/tilebelt";
+import { BBox2D, BBox3D, bboxToTile, xyfzTileAryToObj } from "./lib/tilebelt";
 
 export type LocalSpatialIdInput = XYPointWithAltitude | BBox3D | ZFXYTile | string;
 
@@ -106,13 +107,29 @@ export class LocalSpatialId {
     // this is a GeoJSON.Geometry
 
     // Get the bounding box of our geometry
-    const bbox = this.toWGS84BBox();
+    const bbox = this.toWGS84BBox2D();
 
     // Check if the input geometry is within our bounding box
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
 
     return booleanContains(bboxPolygon(bbox), input);
+  }
+
+  intersects(input: LocalSpatialId | GeoJSON.Geometry) {
+    if (input instanceof LocalSpatialId) {
+      throw new Error("not implemented");
+    }
+    // this is a GeoJSON.Geometry
+
+    // Get the bounding box of our geometry
+    const bbox = this.toWGS84BBox2D();
+
+    // Check if the input geometry intersects our bounding box
+    if (input.type === 'GeometryCollection')
+      throw new Error("GeometryCollection is not supported");
+
+    return booleanIntersects(bboxPolygon(bbox), input);
   }
 
   toContainingGlobalSpatialId(): SpatialId.Space {
@@ -122,8 +139,10 @@ export class LocalSpatialId {
   }
 
   toGlobalSpatialIds(zoom: number) {
-    const _bbox = this.toWGS84BBox();
-    throw new Error("Not implemented yet");
+    const bbox = this.toWGS84BBox();
+    const xyzTile = bboxToTile(bbox);
+    const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile));
+    return tiles.map((tile) => new SpatialId.Space(tile));
   }
 
   toWGS84BBox(): BBox3D {
@@ -142,6 +161,11 @@ export class LocalSpatialId {
     const f0 = this.zfxy.f * this.namespace.scale;
     const f1 = (this.zfxy.f + 1) * this.namespace.scale;
     return [p0.x, p0.y, f0, p1.x, p1.y, f1];
+  }
+
+  toWGS84BBox2D(): BBox2D {
+    const bbox3d = this.toWGS84BBox();
+    return [bbox3d[0], bbox3d[1], bbox3d[3], bbox3d[4]];
   }
 
   toGeoJSON(): GeoJSON.Polygon {

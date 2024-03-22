@@ -2,6 +2,9 @@ import assert from 'node:assert';
 import test, { describe } from 'node:test';
 
 import { LocalNamespace } from "./local_namespace";
+import { BBox3D } from './lib/tilebelt';
+
+import { namespaces } from './shared.test.ts';
 
 describe('LocalSpatialId', () => {
   test("Basic construction", () => {
@@ -14,18 +17,36 @@ describe('LocalSpatialId', () => {
   });
 
   test("Conversion to WGS84", () => {
-    // 東京都庁: 35.68950097945576, 139.69172572944066
-    const namespace = new LocalNamespace({
-      scale: 10e3, // 10km
-      origin_latitude: 35.68950097945576,
-      origin_longitude: 139.69172572944066,
-    });
+    const namespace = namespaces.tokyo;
     const space = namespace.space('/0/0/0/0');
     const bbox = space.toWGS84BBox();
 
     // a bounding box of 10km2, with the center at 東京都庁
     // http://bboxfinder.com/#35.644424,139.636518,35.734552,139.746996
-    const referenceBbox = [ 139.63651780159154, 35.644424126412915, 139.7469957955975, 35.7345521481874 ];
+    const referenceBbox: BBox3D = [ 139.63651780159154, 35.644424126412915, 0, 139.7469957955975, 35.7345521481874, 10e3 ];
     assert.deepStrictEqual(bbox, referenceBbox);
+  });
+
+  test("toContainingGlobalSpatialId", () => {
+    const namespace = namespaces.tokyo;
+    const space = namespace.space('/0/0/0/0');
+    const globalId = space.toContainingGlobalSpatialId();
+    assert.strictEqual(globalId.zfxyStr, '/10/0/909/403');
+  });
+
+  test("toGlobalSpatialIds", () => {
+    const namespace = namespaces.tokyo;
+    const space = namespace.space('/0/0/0/0');
+    const globalIds = space.toGlobalSpatialIds(11);
+    assert.deepStrictEqual(globalIds.map((id) => id.zfxyStr), [
+      '/11/0/1818/806',
+      '/11/0/1819/806',
+      '/11/0/1818/807',
+      '/11/0/1819/807',
+      '/11/1/1818/806',
+      '/11/1/1819/806',
+      '/11/1/1818/807',
+      '/11/1/1819/807',
+    ]);
   });
 });

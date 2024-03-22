@@ -41,6 +41,14 @@ export function getChildren(tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
   ];
 }
 
+export function getChildrenAtZoom(zoom: number, tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
+  if (tile.z >= zoom) {
+    return [tile];
+  }
+  const children = getChildren(tile);
+  return children.flatMap((child) => getChildrenAtZoom(zoom, child));
+}
+
 export function getSurrounding(tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
   const {f,x,y,z} = tile;
   return [
