@@ -42,7 +42,10 @@ export function getChildren(tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
 }
 
 export function getChildrenAtZoom(zoom: number, tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
-  if (tile.z >= zoom) {
+  if (tile.z > zoom) {
+    // return the parent of this tile at the requested zoom
+    return [getParent(tile, zoom - tile.z)];
+  } else if (tile.z === zoom) {
     return [tile];
   }
   const children = getChildren(tile);

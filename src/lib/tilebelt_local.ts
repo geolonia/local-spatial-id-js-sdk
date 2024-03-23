@@ -1,4 +1,4 @@
-import { BBox3D, XYFZTile, getBboxZoom } from "./tilebelt";
+import { BBox3D, XYFZTile, getBboxZoom, xyfzTileAryToObj } from "./tilebelt";
 import { XYPointWithAltitude } from "./types";
 import { ZFXYTile } from "./zfxy";
 
@@ -38,12 +38,7 @@ export function calculateLocalZFXY(scale: number, input: XYPointWithAltitude | B
     bbox = [i.x, i.y, i.alt, i.x, i.y, i.alt];
   }
   const tile = bboxToLocalTile(scale, bbox, zoom);
-  return {
-    z: tile[0],
-    f: tile[1],
-    x: tile[2],
-    y: tile[3],
-  };
+  return xyfzTileAryToObj(tile);
 }
 
 /**
@@ -76,13 +71,19 @@ export function pointToLocalTile(scale: number, x: number, y: number, alt: numbe
 /**
  * Get the precise fractional tile location for a point at a zoom level
  */
-function pointToLocalTileFraction(scale: number, xMeters: number, yMeters: number, altMeters: number, z: number): XYFZTile {
-  let z2 = Math.pow(2, z),
-      x = xMeters / scale * z2,
-      y = yMeters / scale * z2,
-      f = altMeters / scale * z2;
-  // Wrap Tile X
-  x = x % z2;
-  if (x < 0) x = x + z2;
+export function pointToLocalTileFraction(scale: number, xMeters: number, yMeters: number, altMeters: number, z: number): XYFZTile {
+  const z2 = Math.pow(2, z);
+  const z2_1 = Math.pow(2, z - 1);
+
+  // transform input points (in meters) to tile coordinates at the zoom level `z`
+  // note that the origin point is at the center of the tile in the x/y plane, so we have to add z2/2 to the x and y coordinates
+  const x = (z2 * (xMeters / scale)) + z2_1;
+  const y = (z2 * (yMeters / scale)) + z2_1;
+  const f = z2 * (altMeters / scale);
+
+  // Detect out-of-bounds coordinates
+  if (x < 0 || x >= z2 || y < 0 || y >= z2 || f < 0 || f >= z2) {
+    throw new Error(`Point out of bounds: (${xMeters}, ${yMeters}, ${altMeters}) with scale ${scale}m.`);
+  }
   return [x, y, f, z];
 }

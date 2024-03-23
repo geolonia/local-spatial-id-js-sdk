@@ -41,13 +41,13 @@
     "rollup-plugin-typescript2": "^0.36.0",
     "shx": "^0.3.4",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
-  },
-  "dependencies": {
+    "typescript": "^5.3.3",
     "@spatial-id/javascript-sdk": "github:spatial-id/javascript-sdk",
     "@turf/bbox-polygon": "^6.5.0",
     "@turf/boolean-contains": "^6.5.0",
     "geographiclib-geodesic": "^2.0.0",
     "gl-matrix": "^3.4.3"
+  },
+  "dependencies": {
   }
 }

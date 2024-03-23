@@ -75,12 +75,15 @@ export class LocalNamespace {
     // this is a little more complicated than calculating the bounding box.
     // first, get the bounding local space of the input geometry, so we know the range of local spaces we need to cover.
     const boundingSpace = this.boundingSpaceFromGeoJSON(input);
+    console.log('boundingSpace', boundingSpace.zfxyStr);
+    console.log('boundingSpaceBBOX', boundingSpace.toWGS84BBox2D());
     // now, calculate the tiles at requested zoom level that cover the bounding space.
     const coveringSpaces = getChildrenAtZoom(zoom, boundingSpace.zfxy).map((tile) => new LocalSpatialId(this, tile));
+    console.log('coveringSpaces', coveringSpaces.map((space) => space.zfxyStr));
     // now, perform a intersects check on each of the covering spaces to see if they actually contain the input geometry.
     return coveringSpaces.filter((space) => {
       const intersects = space.intersects(input);
-      console.log(`Space ${space.zfxyStr} intersects input: ${intersects}`)
+      // console.log(`Space ${space.zfxyStr} intersects input: ${intersects}`)
       return intersects;
     });
   }

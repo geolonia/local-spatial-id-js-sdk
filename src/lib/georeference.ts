@@ -13,6 +13,9 @@ export interface CoordinateTransformer {
  */
 
 
+function azimuthAngleToCartesianAngle(a: number): number {
+  return ((450 - a)) % 360;
+}
 
 /**
  * Geodesic transformation. Requires the origin point, and angle (in degrees).
@@ -40,10 +43,7 @@ export class OriginGeodesicTransformer implements CoordinateTransformer {
     // 1. Calculate the length and angle of the vector from the source origin to the input point, in meters.
     // Because we're in cartesian coordinates, we can just calculate the pythonagorean distance between the two points.
     const srcPointLengthFromSrcOrgin = Math.sqrt(point.x * point.x + point.y * point.y);
-    let srcPointAngleFromSrcOrgin = 90 - Math.atan2(point.y, point.x) * (180 / Math.PI);
-    if (srcPointAngleFromSrcOrgin < 0) {
-      srcPointAngleFromSrcOrgin += 360;
-    }
+    const srcPointAngleFromSrcOrgin = azimuthAngleToCartesianAngle(Math.atan2(point.y, point.x) * (180 / Math.PI));
 
     // 2. Add the angle of rotation to the angle of the vector.
     const totalRotationAngle = srcPointAngleFromSrcOrgin + this.angle;
@@ -52,6 +52,7 @@ export class OriginGeodesicTransformer implements CoordinateTransformer {
     // 3. Use the geodesic library to calculate the destination point from the origin point, using the length and angle of the vector.
     const destinationPoint = this.geodesic.Direct(this.origin.y, this.origin.x, normalizedRotationAngle, srcPointLengthFromSrcOrgin);
 
+    // console.log('inputPoint', point, 'angle', this.angle, 'srcPointLengthFromSrcOrgin', srcPointLengthFromSrcOrgin, 'srcPointAngleFromSrcOrgin', srcPointAngleFromSrcOrgin, 'totalRotationAngle', totalRotationAngle, 'normalizedRotationAngle', normalizedRotationAngle, 'destinationPoint', destinationPoint);
     // 4. Return the destination point.
     return { x: destinationPoint.lon2, y: destinationPoint.lat2 };
   }
@@ -63,22 +64,21 @@ export class OriginGeodesicTransformer implements CoordinateTransformer {
    * @returns A point in meters from the origin point.
    */
   transformInverse(point: Point): Point {
-    // 1. Use the geodesic library to calculate the length and angle of the vector from the origin point to the input point.
-    const geodesicResult = this.geodesic.Inverse(this.origin.y, this.origin.x, point.y, point.x);
+    // 1. calculate the distance and angle from the origin to the input point.
+    const { s12, azi1 } = this.geodesic.Inverse(this.origin.y, this.origin.x, point.y, point.x);
 
     // 2. Subtract the angle of rotation from the angle of the vector.
-    const srcPointAngleFromSrcOrgin = geodesicResult.azi1;
-    const totalRotationAngle = srcPointAngleFromSrcOrgin - this.angle;
-    const normalizedRotationAngle = totalRotationAngle % 360;
+    let srcPointAngleFromSrcOrginMinusRotation = azimuthAngleToCartesianAngle(azi1 - this.angle);
+    const angleRad = (Math.PI * srcPointAngleFromSrcOrginMinusRotation / 180)
 
-    // 3. Convert the angle to radians.
-    const angleInRadians = normalizedRotationAngle * (Math.PI / 180);
+    // 3. Calculate the x and y coordinates of the vector.
+    const x = s12 * Math.cos(angleRad);
+    const y = s12 * Math.sin(angleRad);
 
-    // 4. Use the length and angle of the vector to calculate the destination point from the origin point.
-    const x = geodesicResult.s12 * Math.cos(angleInRadians);
-    const y = geodesicResult.s12 * Math.sin(angleInRadians);
-
-    // 5. Return the destination point.
-    return { x, y };
+    // 4. Return the vector.
+    return {
+      x: Number(x.toFixed(6)),
+      y: Number(y.toFixed(6))
+    };
   }
 }

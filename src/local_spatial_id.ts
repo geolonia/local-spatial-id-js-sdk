@@ -1,6 +1,6 @@
 import type { LocalNamespace } from "./local_namespace";
 
-import SpatialId from "@spatial-id/javascript-sdk";
+import * as SpatialId from "@spatial-id/javascript-sdk";
 
 import bboxPolygon from "@turf/bbox-polygon";
 import booleanContains from "@turf/boolean-contains";
@@ -128,6 +128,8 @@ export class LocalSpatialId {
     // Check if the input geometry intersects our bounding box
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
+
+    console.log('bbox', JSON.stringify(bboxPolygon(bbox)));
 
     return booleanIntersects(bboxPolygon(bbox), input);
   }
