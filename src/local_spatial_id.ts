@@ -93,7 +93,11 @@ export class LocalSpatialId {
   }
 
   children() {
-    return getChildren(this.zfxy).map((tile) => new LocalSpatialId(this.namespace, tile));
+    return this.childrenAtZoom(this.zfxy.z + 1);
+  }
+
+  childrenAtZoom(zoom: number) {
+    return getChildrenAtZoom(zoom, this.zfxy).map((tile) => new LocalSpatialId(this.namespace, tile));
   }
 
   contains(input: LocalSpatialId | GeoJSON.Geometry) {
@@ -152,17 +156,22 @@ export class LocalSpatialId {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
 
-    const meters = tile2meters(this.namespace.scale, this.zfxy.z);
-    // The origin point is at the center of the tile, so we need to adjust the bounding box by half the tile size.
-    const x0 = (this.zfxy.x * meters) - (meters / 2);
-    const y0 = (this.zfxy.y * meters) - (meters / 2);
-    const x1 = ((this.zfxy.x + 1) * meters) - (meters / 2);
-    const y1 = ((this.zfxy.y + 1) * meters) - (meters / 2);
+    const scale = this.namespace.scale;
+    const meters = tile2meters(scale, this.zfxy.z);
+
+    // The origin point is the center of the root tile
+    const x0 = (this.zfxy.x * meters) - (scale / 2);
+    const y0 = 0 - ((this.zfxy.y * meters) - (scale / 2)); // flip Y-axis: 0/0 is top-left
+    const x1 = ((this.zfxy.x + 1) * meters) - (scale / 2);
+    const y1 = 0 - (((this.zfxy.y + 1) * meters) - (scale / 2));
     const p0 = this.namespace.georeferencer.transform({ x: x0, y: y0 });
     const p1 = this.namespace.georeferencer.transform({ x: x1, y: y1 });
-    const f0 = this.zfxy.f * this.namespace.scale;
-    const f1 = (this.zfxy.f + 1) * this.namespace.scale;
-    return [p0.x, p0.y, f0, p1.x, p1.y, f1];
+    const f0 = this.zfxy.f * scale;
+    const f1 = (this.zfxy.f + 1) * scale;
+    return [
+      p0.x, p1.y, f0, // reminder: Y-axis is flipped
+      p1.x, p0.y, f1
+    ];
   }
 
   toWGS84BBox2D(): BBox2D {
@@ -171,7 +180,7 @@ export class LocalSpatialId {
   }
 
   toGeoJSON(): GeoJSON.Polygon {
-    const bbox = this.toWGS84BBox();
+    const bbox = this.toWGS84BBox2D();
     return bboxPolygon(bbox).geometry;
   }
 

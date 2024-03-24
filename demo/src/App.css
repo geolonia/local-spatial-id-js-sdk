@@ -1,0 +1,25 @@
+#App {
+  width: 100%;
+  height: 100%;
+
+  position: relative;
+}
+
+#App .maplibregl-map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-ctrl-input-form {
+  padding: 1em;
+
+  h3 {
+    margin-top: 0;
+  }
+  form {
+    > label {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+  }
+}

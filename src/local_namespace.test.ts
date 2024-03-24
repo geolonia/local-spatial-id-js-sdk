@@ -24,12 +24,12 @@ describe('LocalNamespace', () => {
     assert.strictEqual(namespace.origin?.longitude, 135.0);
   });
 
-  describe.skip("Georeferencing (origin)", () => {
+  describe("Georeferencing (origin)", () => {
     test("boundingSpaceFromGeoJSON", () => {
       const namespace = namespaces.tokyo;
       const geojson = geoJsons["tokyo/shinjuku-gyoen"];
       const boundingSpace = namespace.boundingSpaceFromGeoJSON(geojson.geometry);
-      assert.strictEqual(boundingSpace.zfxyStr, '/2/0/1/2');
+      assert.strictEqual(boundingSpace.zfxyStr, '/2/0/2/2');
     });
 
     test("spacesFromGeoJSON", () => {
@@ -37,7 +37,10 @@ describe('LocalNamespace', () => {
       const geojson = geoJsons["tokyo/shinjuku-gyoen"];
       const spaces = namespace.spacesFromGeoJSON(3, geojson.geometry);
       assert.deepStrictEqual(spaces.map((space) => space.zfxyStr), [
-        '/3/0/0/2',
+        '/3/0/4/4',
+        '/3/0/5/4',
+        '/3/1/4/4',
+        '/3/1/5/4',
       ]);
     });
   });
