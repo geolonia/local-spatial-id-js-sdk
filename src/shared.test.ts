@@ -7,6 +7,12 @@ export const namespaces: { [key: string]: LocalNamespace } = {
     origin_latitude: 35.68950097945576,
     origin_longitude: 139.69172572944066,
   }),
+  "tokyo_45deg": new LocalNamespace({
+    scale: 10e3, // 1km
+    origin_latitude: 35.68950097945576,
+    origin_longitude: 139.69172572944066,
+    origin_angle: 45,
+  }),
 };
 
 export const geoJsons: { [key: string]: GeoJSON.Feature } = {

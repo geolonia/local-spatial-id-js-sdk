@@ -2,6 +2,7 @@ import type { LocalNamespace } from "./local_namespace";
 
 import * as SpatialId from "@spatial-id/javascript-sdk";
 
+import turfBBox from "@turf/bbox";
 import bboxPolygon from "@turf/bbox-polygon";
 import booleanContains from "@turf/boolean-contains";
 import booleanIntersects from "@turf/boolean-intersects";
@@ -133,8 +134,6 @@ export class LocalSpatialId {
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
 
-    console.log('bbox', JSON.stringify(bboxPolygon(bbox)));
-
     return booleanIntersects(bboxPolygon(bbox), input);
   }
 
@@ -151,7 +150,7 @@ export class LocalSpatialId {
     return tiles.map((tile) => new SpatialId.Space(tile));
   }
 
-  toWGS84BBox(): BBox3D {
+  toGeoJSON(): GeoJSON.Polygon {
     if (!this.namespace.georeferencer) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
@@ -164,24 +163,42 @@ export class LocalSpatialId {
     const y0 = 0 - ((this.zfxy.y * meters) - (scale / 2)); // flip Y-axis: 0/0 is top-left
     const x1 = ((this.zfxy.x + 1) * meters) - (scale / 2);
     const y1 = 0 - (((this.zfxy.y + 1) * meters) - (scale / 2));
+
     const p0 = this.namespace.georeferencer.transform({ x: x0, y: y0 });
-    const p1 = this.namespace.georeferencer.transform({ x: x1, y: y1 });
+    const p1 = this.namespace.georeferencer.transform({ x: x0, y: y1 });
+    const p2 = this.namespace.georeferencer.transform({ x: x1, y: y1 });
+    const p3 = this.namespace.georeferencer.transform({ x: x1, y: y0 });
+
+    return {
+      type: 'Polygon',
+      coordinates: [[
+        [p0.x, p0.y],
+        [p1.x, p1.y],
+        [p2.x, p2.y],
+        [p3.x, p3.y],
+        [p0.x, p0.y],
+      ]]
+    };
+  }
+
+  toWGS84BBox(): BBox3D {
+    const bbox = this.toWGS84BBox2D();
+
+    const scale = this.namespace.scale;
     const f0 = this.zfxy.f * scale;
     const f1 = (this.zfxy.f + 1) * scale;
+
     return [
-      p0.x, p1.y, f0, // reminder: Y-axis is flipped
-      p1.x, p0.y, f1
+      bbox[0], bbox[1], f0,
+      bbox[2], bbox[3], f1,
     ];
   }
 
   toWGS84BBox2D(): BBox2D {
-    const bbox3d = this.toWGS84BBox();
-    return [bbox3d[0], bbox3d[1], bbox3d[3], bbox3d[4]];
-  }
+    const globalGeoJSON = this.toGeoJSON();
+    const bbox = turfBBox(globalGeoJSON);
 
-  toGeoJSON(): GeoJSON.Polygon {
-    const bbox = this.toWGS84BBox2D();
-    return bboxPolygon(bbox).geometry;
+    return [bbox[0], bbox[1], bbox[2], bbox[3]];
   }
 
   private _regenerateAttributesFromZFXY() {

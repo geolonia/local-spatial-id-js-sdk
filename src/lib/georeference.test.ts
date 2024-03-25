@@ -41,7 +41,7 @@ describe('OriginGeodesicTransformer', () => {
     }
   });
 
-  test('Scaling and rotation, with inverse', () => {
+  test('Rotation, with inverse', () => {
     const origin = { x: 139.69172572944066, y: 35.68950097945576 };
     // angle is in degrees from 0 north
     const angle = 90;
@@ -55,5 +55,37 @@ describe('OriginGeodesicTransformer', () => {
 
     const inverseResult = transformer.transformInverse(result);
     assert.deepStrictEqual(inverseResult, inputPoint);
+  });
+
+  test('More rotation', () => {
+    const origin = { x: 139.69172572944066, y: 35.68950097945576 };
+
+    const points: GeoJSON.Feature[] = [];
+    for (let angle = 0; angle < 360; angle += 1) {
+      const transformer = new OriginGeodesicTransformer(origin, angle);
+      const inputPoint = { x: 0, y: 1_000 }; // at 0 degrees, the point is 1,000 meters north of the origin
+      const result = transformer.transform(inputPoint);
+      points.push({
+        "type": "Feature",
+        "properties": {
+          "angle": angle,
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [result.x, result.y]
+        }
+      });
+      const inverseResult = transformer.transformInverse(result);
+      assert.deepEqual(inverseResult, inputPoint); // we can't use strictEqual here because -0 is not equal to 0
+    }
+
+    // points should now be an array of points that form a circle around the origin.
+    // let's check that they are indeed a circle.
+    // console.log('points geojson:', JSON.stringify({
+    //   "type": "FeatureCollection",
+    //   "features": points,
+    // }));
+
+    assert(points.length === 360);
   });
 });

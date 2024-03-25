@@ -22,4 +22,27 @@
       margin-bottom: 0.5rem;
     }
   }
+
+  datalist {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    writing-mode: vertical-lr;
+    width: 200px;
+  }
+
+  option {
+    padding: 0;
+  }
+
+  input[type="range"] {
+    width: 200px;
+    margin: 0;
+  }
+}
+
+.map-ctrl-click-info {
+  max-width: 300px;
+  max-height: 300px;
+  overflow: auto;
 }

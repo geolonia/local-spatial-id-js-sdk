@@ -12,6 +12,7 @@ MapboxDraw.constants.classes.CONTROL_GROUP = 'maplibregl-ctrl-group' as 'mapboxg
 type NSParams = {
   scale: number;
   origin: string;
+  originAngle: number;
 }
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
     scale: 10000,
     origin: '35.68950097945576,139.69172572944066',
+    originAngle: 0,
   });
 
   const namespace = useMemo(() => {
@@ -27,9 +29,11 @@ function App() {
       scale: namespaceParams.scale,
       origin_latitude: latitude,
       origin_longitude: longitude,
+      origin_angle: namespaceParams.originAngle,
     });
   }, [namespaceParams]);
 
+  const [clickedFeatures, setClickedFeatures] = useState<GeoJSON.Feature[]>([]);
   const [localSpaceZoom, setLocalSpaceZoom] = useState(0);
 
   useLayoutEffect(() => {
@@ -46,6 +50,7 @@ function App() {
             "id": "rootSpace",
             "type": "Feature",
             "properties": {
+              "kind": "rootSpace",
               "zfxy": rootSpace.zfxyStr,
             },
             "geometry": rootSpace.toGeoJSON(),
@@ -62,7 +67,7 @@ function App() {
       "layout": {},
       "paint": {
         "fill-color": "#088",
-        "fill-opacity": 0.8,
+        "fill-opacity": 0.1,
       },
     }, 'oc-label-capital');
     map.addLayer({
@@ -96,26 +101,34 @@ function App() {
     });
 
     const updateData = (features: GeoJSON.Feature[]) => {
-      console.log(features);
+      // console.log(features);
       // create a new space for each feature
       for (const feature of features) {
-        const localSpace = namespace.boundingSpaceFromGeoJSON(feature.geometry);
+        const localSpaceBounds = namespace.boundingSpaceFromGeoJSON(feature.geometry);
         src.updateData({
           add: [{
             "type": "Feature",
             "id": feature.id + "-bounding-space",
             "properties": {
-              "zfxy": localSpace.zfxyStr,
+              "kind": "boundingSpaceForDraw",
+              "zfxy": localSpaceBounds.zfxyStr,
             },
-            "geometry": localSpace.toGeoJSON(),
+            "geometry": localSpaceBounds.toGeoJSON(),
           }],
         });
       }
     };
 
     const createDataUpdateEventHandler = (eventName: string) => {
-      const handler: maplibregl.Listener = ({features}) => {
-        updateData(features);
+      const handler: maplibregl.Listener = (event: { features: GeoJSON.Feature[]}) => {
+        const { features } = event;
+        if (eventName === 'draw.delete') {
+          src.updateData({
+            remove: features.map((feature) => feature.id + "-bounding-space"),
+          });
+        } else {
+          updateData(features);
+        }
       };
       map.on(eventName, handler);
       return [eventName, handler] as const;
@@ -130,6 +143,7 @@ function App() {
     return () => {
       map.removeLayer('local-namespace/polygon');
       map.removeLayer('local-namespace/polygon-outline');
+      map.removeLayer('local-namespace/polygon-label');
       map.removeSource('local-namespace');
 
       for (const [eventName, handler] of handlers) {
@@ -149,6 +163,7 @@ function App() {
       "id": space.zfxyStr,
       "type": "Feature",
       "properties": {
+        "kind": "allSpaces",
         "zfxy": space.zfxyStr,
       },
       "geometry": space.toGeoJSON(),
@@ -182,7 +197,11 @@ function App() {
     });
 
     map.on('click', (e) => {
-      console.log(e.lngLat);
+      // console.log(e.lngLat);
+      const features = map.queryRenderedFeatures(e.point, {})
+        .filter((feature) => feature.source === 'local-namespace');
+      console.log(features);
+      setClickedFeatures(features);
     });
   }, []);
 
@@ -212,6 +231,29 @@ function App() {
                   value={namespaceParams.origin}
                   onChange={(ev) => setNamespaceParams((prev) => ({...prev, origin: ev.target.value}))}
                 />
+              </label>
+              <label>
+                <span>角度</span>
+                <div className='input-range-wrapper'>
+                  <input
+                    type='range'
+                    name='originAngle'
+                    value={namespaceParams.originAngle}
+                    min={0}
+                    max={360}
+                    step={1}
+                    list='angle-list'
+                    onChange={(ev) => setNamespaceParams((prev) => ({...prev, originAngle: Number(ev.target.value)}))}
+                  />
+                  <datalist id='angle-list'>
+                    <option value='0' label='0°' />
+                    <option value='90' label='90°' />
+                    <option value='180' label='180°' />
+                    <option value='270' label='270°' />
+                    <option value='360' label='360°' />
+                  </datalist>
+                </div>
+                {namespaceParams.originAngle}°
               </label>
               <label>
                 <span>スケール</span>
@@ -245,6 +287,23 @@ function App() {
                 {localSpaceZoom}
               </label>
             </form>
+          </div>
+        </GeoloniaMap.Control>
+        <GeoloniaMap.Control
+          position='top-left'
+          containerProps={ { className: 'maplibregl-ctrl maplibregl-ctrl-group map-ctrl-click-info' } }
+        >
+          <div className='map-ctrl-input-form'>
+            <h3>詳細情報</h3>
+            <div id='click-info'>
+              <ul>
+                {clickedFeatures.map((feature, index) => (
+                  <li key={index}>
+                    <pre>{JSON.stringify(feature.properties, null, 2)}</pre>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </GeoloniaMap.Control>
       </GeoloniaMap>
