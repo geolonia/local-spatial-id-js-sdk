@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
 import { GeoloniaMap } from '@geolonia/embed-react'
 import './App.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
@@ -13,6 +13,36 @@ type NSParams = {
   scale: number;
   origin: string;
   originAngle: number;
+}
+
+function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
+  const filteredFeatures = features
+    .map((feature) => {
+      const properties = feature.properties || {};
+      return {
+        ...feature,
+        id: feature.properties!.id ?? `${properties.kind}-${properties.zfxy}`,
+      };
+    })
+    .filter((f, i, self) => self.findIndex((s) => s.id === f.id) === i);
+  filteredFeatures.sort((a, b) => a.id.localeCompare(b.id));
+  return (
+    <div id='click-info'>
+      <ul>
+        {filteredFeatures.map((feature) => (
+          <li key={feature.id}>
+            <h3><code>{feature.properties!.kind}</code></h3>
+            <dl>
+              {Object.entries(feature.properties || {}).filter(([key]) => key !== 'kind').map(([key, value]) => (<Fragment key={key}>
+                <dt>{key}</dt>
+                <dd>{value}</dd>
+              </Fragment>))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function App() {
@@ -35,7 +65,7 @@ function App() {
 
   const currentlyListeningForClickLatLng = useRef(false);
   const [clickedFeatures, setClickedFeatures] = useState<GeoJSON.Feature[]>([]);
-  const [localSpaceZoom, setLocalSpaceZoom] = useState(0);
+  const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -58,7 +88,6 @@ function App() {
         ],
       },
     });
-    const src = map.getSource('local-namespace') as maplibregl.GeoJSONSource;
 
     map.addLayer({
       "id": "local-namespace/polygon",
@@ -66,7 +95,7 @@ function App() {
       "source": "local-namespace",
       "layout": {},
       "paint": {
-        "fill-color": "#088",
+        "fill-color": ["to-color", ["get", "fill-color"], "#088"],
         "fill-opacity": 0.1,
       },
     }, 'oc-label-capital');
@@ -99,55 +128,11 @@ function App() {
       padding: 20,
     });
 
-    const updateData = (features: GeoJSON.Feature[]) => {
-      // console.log(features);
-      // create a new space for each feature
-      for (const feature of features) {
-        const localSpaceBounds = namespace.boundingSpaceFromGeoJSON(feature.geometry);
-        src.updateData({
-          add: [{
-            "type": "Feature",
-            "id": feature.id + "-bounding-space",
-            "properties": {
-              "kind": "boundingSpaceForDraw",
-              "zfxy": localSpaceBounds.zfxyStr,
-            },
-            "geometry": localSpaceBounds.toGeoJSON(),
-          }],
-        });
-      }
-    };
-
-    const createDataUpdateEventHandler = (eventName: string) => {
-      const handler: maplibregl.Listener = (event: { features: GeoJSON.Feature[]}) => {
-        const { features } = event;
-        if (eventName === 'draw.delete') {
-          src.updateData({
-            remove: features.map((feature) => feature.id + "-bounding-space"),
-          });
-        } else {
-          updateData(features);
-        }
-      };
-      map.on(eventName, handler);
-      return [eventName, handler] as const;
-    };
-
-    const handlers = [
-      'draw.create',
-      'draw.delete',
-      'draw.update',
-    ].map(createDataUpdateEventHandler);
-
     return () => {
       map.removeLayer('local-namespace/polygon');
       map.removeLayer('local-namespace/polygon-outline');
       map.removeLayer('local-namespace/polygon-label');
       map.removeSource('local-namespace');
-
-      for (const [eventName, handler] of handlers) {
-        map.off(eventName, handler);
-      }
     }
   }, [map, namespace]);
 
@@ -171,7 +156,85 @@ function App() {
     src.updateData({
       add: features,
     });
+
+    const updateData = (features: GeoJSON.Feature[]) => {
+      // console.log(features);
+      // create a new space for each feature
+      for (const feature of features) {
+        const localSpaceBounds = namespace.boundingSpaceFromGeoJSON(feature.geometry);
+        const localSpacesAtZoom = namespace.spacesFromGeoJSON(localSpaceZoom, feature.geometry);
+
+        const features: GeoJSON.Feature[] = [];
+        features.push({
+          "type": "Feature",
+          "id": feature.id + "-bounding-space",
+          "properties": {
+            "kind": "boundingSpaceForDraw",
+            "id": feature.id + "-bounding-space",
+            "zfxy": localSpaceBounds.zfxyStr,
+            "fill-color": "#f00",
+          },
+          "geometry": localSpaceBounds.toGeoJSON(),
+        });
+
+        const zfxys: string[] = [];
+        const polygons: GeoJSON.Polygon[] = [];
+        for (const space of localSpacesAtZoom) {
+          if (space.zfxy.f !== 0) { continue; }
+          zfxys.push(space.zfxyStr);
+          polygons.push(space.toGeoJSON());
+        }
+
+        features.push({
+          "type": "Feature",
+          "id": feature.id + "-localSpaces",
+          "properties": {
+            "kind": `localSpacesForDraw-${localSpaceZoom}`,
+            "id": feature.id + "-localSpaces",
+            "fill-color": "#0f0",
+            "zfxys": zfxys.join(', '),
+          },
+          "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": polygons.map((polygon) => polygon.coordinates),
+          },
+        });
+
+        src.updateData({
+          add: features,
+        });
+      }
+    };
+
+    const createDataUpdateEventHandler = (eventName: string) => {
+      const handler: maplibregl.Listener = (event: { features: GeoJSON.Feature[]}) => {
+        const { features } = event;
+        if (eventName === 'draw.delete') {
+          src.updateData({
+            remove: features.flatMap((feature) => [
+              `${feature.id}-bounding-space`,
+              `${feature.id}-localSpaces`,
+            ]),
+          });
+        } else {
+          updateData(features);
+        }
+      };
+      map.on(eventName, handler);
+      return [eventName, handler] as const;
+    };
+
+    const handlers = [
+      'draw.create',
+      'draw.delete',
+      'draw.update',
+    ].map(createDataUpdateEventHandler);
+
     return () => {
+      for (const [eventName, handler] of handlers) {
+        map.off(eventName, handler);
+      }
+
       src.updateData({
         remove: childrenAtZoom.map((space) => space.zfxyStr),
       });
@@ -286,7 +349,7 @@ function App() {
                   type='range'
                   name='internal-zoom'
                   min={0}
-                  max={5}
+                  max={6}
                   step={1}
                   value={localSpaceZoom}
                   onChange={(ev) => setLocalSpaceZoom(Number(ev.target.value))}
@@ -302,15 +365,7 @@ function App() {
         >
           <div className='map-ctrl-input-form'>
             <h3>詳細情報</h3>
-            <div id='click-info'>
-              <ul>
-                {clickedFeatures.map((feature, index) => (
-                  <li key={index}>
-                    <pre>{JSON.stringify(feature.properties, null, 2)}</pre>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <RenderClickedFeatures features={clickedFeatures} />
           </div>
         </GeoloniaMap.Control>
       </GeoloniaMap>
