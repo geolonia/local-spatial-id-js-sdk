@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useLayoutEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import { GeoloniaMap } from '@geolonia/embed-react'
 import './App.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
@@ -18,9 +18,9 @@ type NSParams = {
 function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
-    scale: 10000,
+    scale: 100,
     origin: '35.68950097945576,139.69172572944066',
-    originAngle: 0,
+    originAngle: 79,
   });
 
   const namespace = useMemo(() => {
@@ -33,6 +33,7 @@ function App() {
     });
   }, [namespaceParams]);
 
+  const currentlyListeningForClickLatLng = useRef(false);
   const [clickedFeatures, setClickedFeatures] = useState<GeoJSON.Feature[]>([]);
   const [localSpaceZoom, setLocalSpaceZoom] = useState(0);
 
@@ -46,15 +47,14 @@ function App() {
       "data": {
         "type": "FeatureCollection",
         "features": [
-          {
-            "id": "rootSpace",
-            "type": "Feature",
-            "properties": {
-              "kind": "rootSpace",
-              "zfxy": rootSpace.zfxyStr,
-            },
-            "geometry": rootSpace.toGeoJSON(),
-          }
+          // {
+          //   "id": "rootSpace",
+          //   "type": "Feature",
+          //   "properties": {
+          //     "kind": "rootSpace",
+          //   },
+          //   "geometry": rootSpace.toGeoJSON(),
+          // }
         ],
       },
     });
@@ -89,7 +89,6 @@ function App() {
         "text-field": "{zfxy}",
         "text-size": 12,
         "text-anchor": "center",
-        "text-offset": [0, -2],
         "text-allow-overlap": true,
       },
       "paint": {
@@ -163,7 +162,7 @@ function App() {
       "id": space.zfxyStr,
       "type": "Feature",
       "properties": {
-        "kind": "allSpaces",
+        "kind": `spaceAtZoom-${localSpaceZoom}`,
         "zfxy": space.zfxyStr,
       },
       "geometry": space.toGeoJSON(),
@@ -197,11 +196,17 @@ function App() {
     });
 
     map.on('click', (e) => {
-      // console.log(e.lngLat);
-      const features = map.queryRenderedFeatures(e.point, {})
-        .filter((feature) => feature.source === 'local-namespace');
-      console.log(features);
-      setClickedFeatures(features);
+      if (currentlyListeningForClickLatLng.current) {
+        console.log(e.lngLat);
+        setNamespaceParams((prev) => ({...prev, origin: `${e.lngLat.lat},${e.lngLat.lng}`}));
+        currentlyListeningForClickLatLng.current = false;
+      } else {
+        // console.log(e.lngLat);
+        const features = map.queryRenderedFeatures(e.point, {})
+          .filter((feature) => feature.source === 'local-namespace');
+        console.log(features);
+        setClickedFeatures(features);
+      }
     });
   }, []);
 
@@ -213,6 +218,7 @@ function App() {
         lat='35.68952770997265'
         lng='139.6917002413105'
         zoom='13'
+        maxZoom='25'
         marker='off'
         mapStyle='geolonia/basic-v1'
       >
@@ -229,6 +235,7 @@ function App() {
                   type='text'
                   name='origin'
                   value={namespaceParams.origin}
+                  onFocus={() => {currentlyListeningForClickLatLng.current = true}}
                   onChange={(ev) => setNamespaceParams((prev) => ({...prev, origin: ev.target.value}))}
                 />
               </label>
@@ -279,7 +286,7 @@ function App() {
                   type='range'
                   name='internal-zoom'
                   min={0}
-                  max={4}
+                  max={5}
                   step={1}
                   value={localSpaceZoom}
                   onChange={(ev) => setLocalSpaceZoom(Number(ev.target.value))}
