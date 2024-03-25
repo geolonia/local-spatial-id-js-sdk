@@ -309,18 +309,18 @@ function App() {
                     type='range'
                     name='originAngle'
                     value={namespaceParams.originAngle}
-                    min={0}
-                    max={360}
+                    min={-180}
+                    max={180}
                     step={1}
                     list='angle-list'
                     onChange={(ev) => setNamespaceParams((prev) => ({...prev, originAngle: Number(ev.target.value)}))}
                   />
                   <datalist id='angle-list'>
+                    <option value='-180' label='-180°' />
+                    <option value='-90' label='-90°' />
                     <option value='0' label='0°' />
                     <option value='90' label='90°' />
                     <option value='180' label='180°' />
-                    <option value='270' label='270°' />
-                    <option value='360' label='360°' />
                   </datalist>
                 </div>
                 {namespaceParams.originAngle}°
