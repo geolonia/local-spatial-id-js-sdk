@@ -36,12 +36,17 @@ export function getBboxZoom(bbox: BBox3D) {
 /**
  * Get the smallest tile to cover a bbox
  */
-export function bboxToTile(bboxCoords: BBox3D, minZoom?: number): XYFZTile {
+export function bboxToTile(bboxCoords: BBox3D, minZoom?: number, maxZoom?: number): XYFZTile {
   const min = pointToTile(bboxCoords[0], bboxCoords[1], bboxCoords[2], 32);
   const max = pointToTile(bboxCoords[3], bboxCoords[4], bboxCoords[5], 32);
   const bbox: BBox3D = [min[0], min[1], min[2], max[0], max[1], max[2]];
 
-  const z = Math.min(getBboxZoom(bbox), typeof minZoom !== 'undefined' ? minZoom : MAX_ZOOM);
+  const z = Math.min(
+    getBboxZoom(bbox),
+    typeof minZoom !== 'undefined' ?
+      minZoom :
+      (maxZoom ?? MAX_ZOOM)
+    );
   if (z === 0) return [0, 0, 0, 0];
   const x = bbox[0] >>> (32 - z);
   const y = bbox[1] >>> (32 - z);

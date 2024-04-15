@@ -16,6 +16,14 @@ import { BBox2D, BBox3D, bboxToTile, xyfzTileAryToObj } from "./lib/tilebelt";
 
 export type LocalSpatialIdInput = XYPointWithAltitude | BBox3D | ZFXYTile | string;
 
+type ToContainingGlobalSpatialIdOptions = {
+  /// If true, the f value will be ignored when calculating the containing global spatial ID.
+  ignoreF?: boolean;
+
+  /// If set, the maximum zoom level to consider when calculating the containing global spatial ID.
+  maxzoom?: number;
+}
+
 const DEFAULT_ZOOM = 25 as const;
 
 export class LocalSpatialId {
@@ -111,14 +119,14 @@ export class LocalSpatialId {
     }
     // this is a GeoJSON.Geometry
 
-    // Get the bounding box of our geometry
-    const bbox = this.toWGS84BBox2D();
+    // Get the GeoJSON feature of our geometry
+    const polygon = this.toGeoJSON();
 
-    // Check if the input geometry is within our bounding box
+    // Check if the input geometry contains our GeoJSON feature
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
 
-    return booleanContains(bboxPolygon(bbox), input);
+    return booleanContains(polygon, input);
   }
 
   intersects(input: LocalSpatialId | GeoJSON.Geometry) {
@@ -127,27 +135,38 @@ export class LocalSpatialId {
     }
     // this is a GeoJSON.Geometry
 
-    // Get the bounding box of our geometry
-    const bbox = this.toWGS84BBox2D();
+    // Get the GeoJSON feature of our geometry
+    const polygon = this.toGeoJSON();
 
-    // Check if the input geometry intersects our bounding box
+    // Check if the input geometry intersects our GeoJSON feature
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
 
-    return booleanIntersects(bboxPolygon(bbox), input);
+    return booleanIntersects(polygon, input);
   }
 
-  toContainingGlobalSpatialId(): SpatialId.Space {
+  toContainingGlobalSpatialId(options: ToContainingGlobalSpatialIdOptions = {}): SpatialId.Space {
     const bbox = this.toWGS84BBox();
+    if (options.ignoreF) {
+      bbox[2] = 0;
+      bbox[5] = 0;
+    }
     const xyzTile = bboxToTile(bbox);
     return new SpatialId.Space(xyfzTileAryToObj(xyzTile));
   }
 
   toGlobalSpatialIds(zoom: number) {
+    const geometry = this.toGeoJSON();
+
     const bbox = this.toWGS84BBox();
     const xyzTile = bboxToTile(bbox);
-    const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile));
-    return tiles.map((tile) => new SpatialId.Space(tile));
+
+    // ignore F changes for this calculation
+    const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile), true);
+
+    return tiles
+      .map((tile) => new SpatialId.Space(tile))
+      .filter((space) => booleanIntersects(space.toGeoJSON(), geometry));
   }
 
   toGeoJSON(): GeoJSON.Polygon {

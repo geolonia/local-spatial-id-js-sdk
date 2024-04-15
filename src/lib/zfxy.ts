@@ -44,15 +44,19 @@ export function getChildren(tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
   ];
 }
 
-export function getChildrenAtZoom(zoom: number, tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {
+export function getChildrenAtZoom(zoom: number, tile: ZFXYTile = ZFXY_ROOT_TILE, ignoreF: boolean = false): ZFXYTile[] {
   if (tile.z > zoom) {
     // return the parent of this tile at the requested zoom
     return [getParent(tile, zoom - tile.z)];
   } else if (tile.z === zoom) {
     return [tile];
   }
-  const children = getChildren(tile);
-  return children.flatMap((child) => getChildrenAtZoom(zoom, child));
+  let children = getChildren(tile);
+  if (ignoreF) {
+    // remove the last 4 elements from the array, because they are the children with f=f+1
+    children = children.slice(0, 4);
+  }
+  return children.flatMap((child) => getChildrenAtZoom(zoom, child, ignoreF));
 }
 
 export function getSurrounding(tile: ZFXYTile = ZFXY_ROOT_TILE): ZFXYTile[] {

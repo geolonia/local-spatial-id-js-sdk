@@ -66,6 +66,7 @@ function App() {
   const currentlyListeningForClickLatLng = useRef(false);
   const [clickedFeatures, setClickedFeatures] = useState<GeoJSON.Feature[]>([]);
   const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
+  const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -113,6 +114,7 @@ function App() {
       "id": "local-namespace/polygon-label",
       "type": "symbol",
       "source": "local-namespace",
+      "filter": ["!=", ["get", "kind"], "globalSpace"],
       "layout": {
         "text-font": ["Noto Sans Regular"],
         "text-field": "{zfxy}",
@@ -126,6 +128,7 @@ function App() {
 
     map.fitBounds(rootSpace.toWGS84BBox2D(), {
       padding: 20,
+      duration: 0, // disable animation
     });
 
     return () => {
@@ -257,8 +260,21 @@ function App() {
     map.on('load', () => {
       setMap(map);
     });
+  }, []);
 
-    map.on('click', (e) => {
+  useEffect(() => {
+    if (!map) { return; }
+    const src = map.getSource('local-namespace') as maplibregl.GeoJSONSource;
+
+    let temporaryIds: string[] = [];
+
+    const clickHandler = (e: maplibregl.MapMouseEvent) => {
+      // empty the temporary IDs from the previous click
+      src.updateData({
+        remove: temporaryIds,
+      });
+      temporaryIds = [];
+
       if (currentlyListeningForClickLatLng.current) {
         console.log(e.lngLat);
         setNamespaceParams((prev) => ({...prev, origin: `${e.lngLat.lat},${e.lngLat.lng}`}));
@@ -266,12 +282,49 @@ function App() {
       } else {
         // console.log(e.lngLat);
         const features = map.queryRenderedFeatures(e.point, {})
-          .filter((feature) => feature.source === 'local-namespace');
-        console.log(features);
-        setClickedFeatures(features);
+          .filter((feature) => (
+            feature.source === 'local-namespace' &&
+            feature.properties.kind.startsWith('spaceAtZoom-')
+          ));
+        // console.log(features);
+
+        // Generate the global ID for the clicked feature
+        const zfxys = new Set(features.map((feature) => feature.properties!.zfxy));
+        const geojsons: GeoJSON.Feature[] = [];
+        for (const zfxy of zfxys) {
+          const space = namespace.space(zfxy);
+          // const globalId = space.toContainingGlobalSpatialId({ignoreF: true, maxzoom: 25});
+          const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
+          for (const globalId of globalIds) {
+            const featureId = `global-${globalId.tilehash}`;
+            temporaryIds.push(featureId);
+            geojsons.push({
+              "type": "Feature",
+              "id": featureId,
+              "geometry": globalId.toGeoJSON(),
+              "properties": {
+                "kind": "globalSpace",
+                "zfxy": globalId.zfxyStr,
+              },
+            });
+            console.log(`${zfxy} => ${globalId.zfxyStr}`);
+          }
+        }
+        src.updateData({
+          add: geojsons,
+        });
+        setClickedFeatures([...features, ...geojsons]);
       }
-    });
-  }, []);
+    };
+    map.on('click', clickHandler);
+
+    return () => {
+      map.off('click', clickHandler);
+      src.updateData({
+        remove: temporaryIds,
+      });
+    };
+  }, [map, namespace, globalSpaceZoom]);
 
   return (
     <div id='App'>
@@ -355,6 +408,21 @@ function App() {
                   onChange={(ev) => setLocalSpaceZoom(Number(ev.target.value))}
                 />
                 {localSpaceZoom}
+              </label>
+            </form>
+            <h3>グローバル空間分解能</h3>
+            <form>
+              <label>
+                <input
+                  type='range'
+                  name='global-zoom'
+                  min={17}
+                  max={25}
+                  step={1}
+                  value={globalSpaceZoom}
+                  onChange={(ev) => setGlobalSpaceZoom(Number(ev.target.value))}
+                />
+                {globalSpaceZoom}
               </label>
             </form>
           </div>
