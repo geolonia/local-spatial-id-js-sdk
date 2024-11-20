@@ -178,10 +178,16 @@ export class LocalSpatialId {
     const meters = tile2meters(scale, this.zfxy.z);
 
     // The origin point is the center of the root tile
-    const x0 = (this.zfxy.x * meters) - (scale / 2);
-    const y0 = 0 - ((this.zfxy.y * meters) - (scale / 2)); // flip Y-axis: 0/0 is top-left
-    const x1 = ((this.zfxy.x + 1) * meters) - (scale / 2);
-    const y1 = 0 - (((this.zfxy.y + 1) * meters) - (scale / 2));
+    // const x0 = (this.zfxy.x * meters) - (scale / 2);
+    // const y0 = 0 - ((this.zfxy.y * meters) - (scale / 2)); // flip Y-axis: 0/0 is top-left
+    // const x1 = ((this.zfxy.x + 1) * meters) - (scale / 2);
+    // const y1 = 0 - (((this.zfxy.y + 1) * meters) - (scale / 2));
+
+    // The origin point is the top-left of the root tile
+    const x0 = this.zfxy.x * meters;
+    const y0 = 0 - (this.zfxy.y * meters); // flip Y-axis: 0/0 is top-left
+    const x1 = (this.zfxy.x + 1) * meters;
+    const y1 = 0 - ((this.zfxy.y + 1) * meters);
 
     const p0 = this.namespace.georeferencer.transform({ x: x0, y: y0 });
     const p1 = this.namespace.georeferencer.transform({ x: x0, y: y1 });

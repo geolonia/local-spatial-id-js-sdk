@@ -48,9 +48,9 @@ function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
 function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
-    scale: 100,
-    origin: '35.68950097945576,139.69172572944066',
-    originAngle: 79,
+    scale: 150,
+    origin: '35.690128926025096,139.69097558834432',
+    originAngle: -11,
   });
 
   const namespace = useMemo(() => {
