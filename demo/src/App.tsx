@@ -15,6 +15,10 @@ type NSParams = {
   originAngle: number;
 }
 
+const HIDDEN_PROPS = new Set([
+  'kind',
+  'lbl',
+]);
 function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
   const filteredFeatures = features
     .map((feature) => {
@@ -33,7 +37,7 @@ function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
           <li key={feature.id}>
             <h3><code>{feature.properties!.kind}</code></h3>
             <dl>
-              {Object.entries(feature.properties || {}).filter(([key]) => key !== 'kind').map(([key, value]) => (<Fragment key={key}>
+              {Object.entries(feature.properties || {}).filter(([key]) => !HIDDEN_PROPS.has(key)).map(([key, value]) => (<Fragment key={key}>
                 <dt>{key}</dt>
                 <dd>{value}</dd>
               </Fragment>))}
@@ -65,6 +69,7 @@ function App() {
 
   const currentlyListeningForClickLatLng = useRef(false);
   const [clickedFeatures, setClickedFeatures] = useState<GeoJSON.Feature[]>([]);
+  const [currentMode, setCurrentMode] = useState<'global' | 'local'>('local');
   const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
 
@@ -114,7 +119,7 @@ function App() {
       "id": "local-namespace/polygon-label",
       "type": "symbol",
       "source": "local-namespace",
-      "filter": ["!=", ["get", "kind"], "globalSpace"],
+      "filter": ["==", ["get", "lbl"], "on"],
       "layout": {
         "text-font": ["Noto Sans Regular"],
         "text-field": "{zfxy}",
@@ -127,7 +132,7 @@ function App() {
     }, 'oc-label-capital');
 
     map.fitBounds(rootSpace.toWGS84BBox2D(), {
-      padding: 20,
+      padding: 200,
       duration: 0, // disable animation
     });
 
@@ -151,6 +156,7 @@ function App() {
       "type": "Feature",
       "properties": {
         "kind": `spaceAtZoom-${localSpaceZoom}`,
+        "lbl": "on",
         "zfxy": space.zfxyStr,
       },
       "geometry": space.toGeoJSON(),
@@ -173,6 +179,7 @@ function App() {
           "id": feature.id + "-bounding-space",
           "properties": {
             "kind": "boundingSpaceForDraw",
+            "lbl": "on",
             "id": feature.id + "-bounding-space",
             "zfxy": localSpaceBounds.zfxyStr,
             "fill-color": "#f00",
@@ -193,6 +200,7 @@ function App() {
           "id": feature.id + "-localSpaces",
           "properties": {
             "kind": `localSpacesForDraw-${localSpaceZoom}`,
+            "lbl": "on",
             "id": feature.id + "-localSpaces",
             "fill-color": "#0f0",
             "zfxys": zfxys.join(', '),
@@ -304,6 +312,7 @@ function App() {
               "geometry": globalId.toGeoJSON(),
               "properties": {
                 "kind": "globalSpace",
+                "lbl": "off",
                 "zfxy": globalId.zfxyStr,
               },
             });
@@ -395,6 +404,14 @@ function App() {
           containerProps={ { className: 'maplibregl-ctrl maplibregl-ctrl-group ' } }
         >
           <div className='map-ctrl-input-form'>
+            <form>
+              <label>
+                モード: <select value={currentMode} onChange={(ev) => setCurrentMode(ev.currentTarget.value as "global" | "local")}>
+                  <option value={'global'}>グローバル</option>
+                  <option value={'local'}>ローカル</option>
+                </select>
+              </label>
+            </form>
             <h3>空間内分解能</h3>
             <form>
               <label>
