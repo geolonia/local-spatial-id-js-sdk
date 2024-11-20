@@ -92,14 +92,16 @@ function App() {
 
     map.addLayer({
       "id": "local-namespace/polygon",
-      "type": "fill",
+      "type": "fill-extrusion",
       "source": "local-namespace",
       "layout": {},
       "paint": {
-        "fill-color": ["to-color", ["get", "fill-color"], "#088"],
-        "fill-opacity": 0.1,
+        "fill-extrusion-color": ["to-color", ["get", "fill-color"], "#088"],
+        "fill-extrusion-opacity": 0.8,
+        "fill-extrusion-height": 20,
+        "fill-extrusion-base": 10,
       },
-    }, 'oc-label-capital');
+    }, 'building');
     map.addLayer({
       "id": "local-namespace/polygon-outline",
       "type": "line",
@@ -109,7 +111,7 @@ function App() {
         "line-color": "#088",
         "line-width": 2,
       },
-    }, 'oc-label-capital');
+    }, 'building');
     map.addLayer({
       "id": "local-namespace/polygon-label",
       "type": "symbol",
@@ -335,8 +337,14 @@ function App() {
         lng='139.6917002413105'
         zoom='13'
         maxZoom='25'
+        maxPitch='85'
         marker='off'
         mapStyle='geolonia/basic-v1'
+        render3d='on'
+        //@ts-ignore
+        initOptions={{
+          maxPitch: 85,
+        }}
       >
         <GeoloniaMap.Control
           position='top-left'
