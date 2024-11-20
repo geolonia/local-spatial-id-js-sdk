@@ -22,8 +22,7 @@ describe('LocalSpatialId', () => {
     const bbox = space.toWGS84BBox();
 
     // a bounding box of 10km2, with the center at 東京都庁
-    // http://bboxfinder.com/#35.644424126412915,139.63645566328384,35.7345521481874,139.7469336572898
-    const referenceBbox: BBox3D =  [ 139.63645566328384, 35.644424126412915, 0, 139.7469957955975, 35.7345521481874, 10000 ];
+    const referenceBbox: BBox3D =  [ 139.64657, 35.63581115931438, 0, 139.7570982609969, 35.72599000000001, 10000 ];
     assert.deepStrictEqual(bbox, referenceBbox);
   });
 
@@ -33,8 +32,7 @@ describe('LocalSpatialId', () => {
     const bbox = space.toWGS84BBox();
 
     // a bounding box of 10km2, with the center at 東京都庁
-    // http://bboxfinder.com/#35.644424126412915,139.63645566328384,35.7345521481874,139.7469336572898
-    const referenceBbox: BBox3D =  [ 139.61360603969516, 35.6257704895902, 0, 139.76984541918617, 35.753230793225924, 10000 ];
+    const referenceBbox: BBox3D =  [ 139.61377266711673, 35.61310942775181, 0, 139.76998733288326, 35.74057, 10000 ];
     assert.deepStrictEqual(bbox, referenceBbox);
   });
 

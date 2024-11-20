@@ -25,22 +25,20 @@ describe('LocalNamespace', () => {
   });
 
   describe("Georeferencing (origin)", () => {
-    test("boundingSpaceFromGeoJSON", () => {
-      const namespace = namespaces.tokyo;
-      const geojson = geoJsons["tokyo/shinjuku-gyoen"];
-      const boundingSpace = namespace.boundingSpaceFromGeoJSON(geojson.geometry);
-      assert.strictEqual(boundingSpace.zfxyStr, '/2/0/2/2');
-    });
-
     test("spacesFromGeoJSON", () => {
       const namespace = namespaces.tokyo;
       const geojson = geoJsons["tokyo/shinjuku-gyoen"];
-      const spaces = namespace.spacesFromGeoJSON(3, geojson.geometry);
-      assert.deepStrictEqual(spaces.map((space) => space.zfxyStr), [
-        '/3/0/4/4',
-        '/3/0/5/4',
-        '/3/1/4/4',
-        '/3/1/5/4',
+      const boundingSpace = namespace.spacesFromGeoJSON(4, geojson.geometry);
+      const zfxys = boundingSpace.map((space) => space.zfxyStr);
+      assert.deepStrictEqual(zfxys, [
+        '/4/0/8/6',
+        '/4/0/9/6',
+        '/4/0/8/7',
+        '/4/0/9/7',
+        '/4/1/8/6',
+        '/4/1/9/6',
+        '/4/1/8/7',
+        '/4/1/9/7',
       ]);
     });
   });

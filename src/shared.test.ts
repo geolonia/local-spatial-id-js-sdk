@@ -4,13 +4,13 @@ export const namespaces: { [key: string]: LocalNamespace } = {
   // 東京都庁: 35.68950097945576, 139.69172572944066
   "tokyo": new LocalNamespace({
     scale: 10e3, // 10km
-    origin_latitude: 35.68950097945576,
-    origin_longitude: 139.69172572944066,
+    origin_latitude: 35.72599, // 35.68950097945576,
+    origin_longitude: 139.64657, // 139.69172572944066,
   }),
   "tokyo_45deg": new LocalNamespace({
-    scale: 10e3, // 1km
-    origin_latitude: 35.68950097945576,
-    origin_longitude: 139.69172572944066,
+    scale: 10e3, // 10km
+    origin_latitude: 35.74057, // 35.68950097945576,
+    origin_longitude: 139.69188, // 139.69172572944066,
     origin_angle: 45,
   }),
 };

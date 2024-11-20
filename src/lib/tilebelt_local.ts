@@ -73,12 +73,15 @@ export function pointToLocalTile(scale: number, x: number, y: number, alt: numbe
  */
 export function pointToLocalTileFraction(scale: number, xMeters: number, yMeters: number, altMeters: number, z: number): XYFZTile {
   const z2 = Math.pow(2, z);
-  const z2_1 = Math.pow(2, z - 1);
+  // const z2_1 = Math.pow(2, z - 1);
 
   // transform input points (in meters) to tile coordinates at the zoom level `z`
   // note that the origin point is at the center of the tile in the x/y plane, so we have to add z2/2 to the x and y coordinates
-  const x = (z2 * (xMeters / scale)) + z2_1;
-  const y = (z2 * (yMeters / scale)) + z2_1;
+  // const x = (z2 * (xMeters / scale)) + z2_1;
+  // const y = (z2 * (yMeters / scale)) + z2_1;
+
+  const x = z2 * (xMeters / scale);
+  const y = z2 * (yMeters / scale);
   const f = z2 * (altMeters / scale);
 
   // Detect out-of-bounds coordinates
