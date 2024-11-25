@@ -77,4 +77,15 @@ describe('pointToLocalTileFraction', () => {
     assert.deepStrictEqual(tb.pointToLocalTileFraction(1024, 511, 511, 0, 11), [1022, 1022, 0, 11]);
     assert.deepStrictEqual(tb.pointToLocalTileFraction(1024, 511, 511, 0, 9), [255.5, 255.5, 0, 9]);
   });
+
+  test('works with clamp', () => {
+    assert.deepStrictEqual(tb.pointToLocalTileFraction(1024, 0, 0, 0, 0, true), [0, 0, 0, 0]);
+    assert.deepStrictEqual(tb.pointToLocalTileFraction(1024, 1100, 1100, 0, 0, true), [0, 0, 0, 0]);
+  });
+
+  test('throws an error for out-of-bounds coordinates', () => {
+    assert.throws(() => {
+      tb.pointToLocalTileFraction(1024, 1100, 1100, 0, 0, false);
+    });
+  });
 });

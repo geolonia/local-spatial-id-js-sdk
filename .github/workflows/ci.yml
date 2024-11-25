@@ -21,6 +21,13 @@ jobs:
       - run: npm run test
       - run: npm run build
 
+      - name: Build demo
+        run: |
+          cd demo
+          npm ci
+          npm run lint
+          npm run build
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist
