@@ -470,6 +470,7 @@ function App() {
       src.updateData({
         remove: lastGlobalIds,
       });
+      setClickedFeatures([]);
     };
   }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom]);
 
