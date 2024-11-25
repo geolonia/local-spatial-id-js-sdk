@@ -86,7 +86,7 @@ export function pointToLocalTileFraction(scale: number, xMeters: number, yMeters
 
   // Detect out-of-bounds coordinates
   if (x < 0 || x >= z2 || y < 0 || y >= z2 || f < 0 || f >= z2) {
-    throw new Error(`Point out of bounds: (${xMeters}, ${yMeters}, ${altMeters}) with scale ${scale}m.`);
+    throw new Error(`Point out of bounds: (${xMeters}, ${yMeters}, ${altMeters}) with scale ${scale}m (Point would have been (x=${x}, y=${y}, f=${f}, z=${z}) and maximum for this zoom is ${z2}).`);
   }
   return [x, y, f, z];
 }

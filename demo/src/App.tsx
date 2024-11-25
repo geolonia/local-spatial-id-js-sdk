@@ -4,6 +4,7 @@ import "./App.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import * as LSID from "@geolonia/local-spatial-id-js-sdk";
+import { hashCode } from "./tools";
 
 MapboxDraw.constants.classes.CONTROL_BASE = "maplibregl-ctrl" as "mapboxgl-ctrl";
 MapboxDraw.constants.classes.CONTROL_PREFIX = "maplibregl-ctrl-" as "mapboxgl-ctrl-";
@@ -15,29 +16,25 @@ type NSParams = {
   originAngle: number;
 };
 
-const HIDDEN_PROPS = new Set([
-  "kind",
-  "lbl",
-]);
 function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
-  const filteredFeatures = features
-    .map((feature) => {
-      const properties = feature.properties || {};
-      return {
-        ...feature,
-        id: feature.properties!.id ?? `${properties.kind}-${properties.zfxy}`,
-      };
-    })
-    .filter((f, i, self) => self.findIndex(s => s.id === f.id) === i);
-  filteredFeatures.sort((a, b) => a.id.localeCompare(b.id));
+  // const filteredFeatures = features
+  //   .map((feature) => {
+  //     const properties = feature.properties || {};
+  //     return {
+  //       ...feature,
+  //       id: feature.properties!.id ?? `${properties._kind}-${properties.zfxy}`,
+  //     };
+  //   })
+  //   .filter((f, i, self) => self.findIndex(s => s.id === f.id) === i);
+  // filteredFeatures.sort((a, b) => a.id.localeCompare(b.id));
   return (
     <div id="click-info">
       <ul>
-        {filteredFeatures.map(feature => (
+        {features.map(feature => (
           <li key={feature.id}>
-            <h3><code>{feature.properties!.kind}</code></h3>
+            <h3><code>{feature.properties!._kind}</code></h3>
             <dl>
-              {Object.entries(feature.properties || {}).filter(([key]) => !HIDDEN_PROPS.has(key)).map(([key, value]) => (
+              {Object.entries(feature.properties || {}).filter(([key]) => key[0] !== "_").map(([key, value]) => (
                 <Fragment key={key}>
                   <dt>{key}</dt>
                   <dd>{value}</dd>
@@ -84,16 +81,7 @@ function App() {
       "type": "geojson",
       "data": {
         "type": "FeatureCollection",
-        "features": [
-          // {
-          //   "id": "rootSpace",
-          //   "type": "Feature",
-          //   "properties": {
-          //     "kind": "rootSpace",
-          //   },
-          //   "geometry": rootSpace.toGeoJSON(),
-          // }
-        ],
+        "features": [],
       },
     });
 
@@ -103,8 +91,19 @@ function App() {
       "source": "local-namespace",
       "layout": {},
       "paint": {
-        "fill-color": ["to-color", ["get", "fill-color"], "#088"],
-        "fill-opacity": 0.1,
+        "fill-color": [
+          "to-color",
+          ["get", "fill-color"],
+          ["match", ["get", "_kind"], "globalSpace", "#808", "#088"],
+          "#088",
+        ],
+        "fill-opacity": [
+          "match",
+          ["get", "_selected"],
+          "on",
+          0.5,
+          0.1,
+        ],
       },
     }, "oc-label-capital");
     map.addLayer({
@@ -113,7 +112,12 @@ function App() {
       "source": "local-namespace",
       "layout": {},
       "paint": {
-        "line-color": "#088",
+        "line-color": [
+          "to-color",
+          ["get", "fill-color"],
+          ["match", ["get", "_kind"], "globalSpace", "#808", "#088"],
+          "#088",
+        ],
         "line-width": 2,
       },
     }, "oc-label-capital");
@@ -121,7 +125,7 @@ function App() {
       "id": "local-namespace/polygon-label",
       "type": "symbol",
       "source": "local-namespace",
-      "filter": ["==", ["get", "lbl"], "on"],
+      "filter": ["==", ["get", "_lbl"], "on"],
       "layout": {
         "text-font": ["Noto Sans Regular"],
         "text-field": "{zfxy}",
@@ -156,11 +160,12 @@ function App() {
       .childrenAtZoom(localSpaceZoom)
       .filter(space => space.zfxy.f === 0);
     const features: GeoJSON.Feature[] = childrenAtZoom.map(space => ({
-      "id": space.zfxyStr,
+      "id": hashCode(space.zfxyStr),
       "type": "Feature",
       "properties": {
-        "kind": `spaceAtZoom-${localSpaceZoom}`,
-        "lbl": "on",
+        "_kind": "localSpace",
+        "_lbl": "on",
+        "zoom": localSpaceZoom,
         "zfxy": space.zfxyStr,
       },
       "geometry": space.toGeoJSON(),
@@ -180,10 +185,10 @@ function App() {
         const features: GeoJSON.Feature[] = [];
         features.push({
           "type": "Feature",
-          "id": feature.id + "-bounding-space",
+          "id": hashCode(feature.id + "-bounding-space"),
           "properties": {
-            "kind": "boundingSpaceForDraw",
-            "lbl": "on",
+            "_kind": "boundingSpaceForDraw",
+            "_lbl": "on",
             "id": feature.id + "-bounding-space",
             "zfxy": localSpaceBounds.zfxyStr,
             "fill-color": "#f00",
@@ -203,10 +208,10 @@ function App() {
 
         features.push({
           "type": "Feature",
-          "id": feature.id + "-localSpaces",
+          "id": hashCode(feature.id + "-localSpaces"),
           "properties": {
-            "kind": `localSpacesForDraw-${localSpaceZoom}`,
-            "lbl": "on",
+            "_kind": `localSpacesForDraw-${localSpaceZoom}`,
+            "_lbl": "on",
             "id": feature.id + "-localSpaces",
             "fill-color": "#0f0",
             "zfxys": zfxys.join(", "),
@@ -229,12 +234,11 @@ function App() {
         if (eventName === "draw.delete") {
           src.updateData({
             remove: features.flatMap(feature => [
-              `${feature.id}-bounding-space`,
-              `${feature.id}-localSpaces`,
+              hashCode(`${feature.id}-bounding-space`),
+              hashCode(`${feature.id}-localSpaces`),
             ]),
           });
-        }
-        else {
+        } else {
           updateData(features);
         }
       };
@@ -254,7 +258,7 @@ function App() {
       }
 
       src.updateData({
-        remove: childrenAtZoom.map(space => space.zfxyStr),
+        remove: childrenAtZoom.map(space => hashCode(space.zfxyStr)),
       });
     };
   }, [map, namespace, localSpaceZoom]);
@@ -283,7 +287,8 @@ function App() {
     }
     const src = map.getSource("local-namespace") as maplibregl.GeoJSONSource;
 
-    let temporaryIds: string[] = [];
+    let temporaryIds: number[] = [];
+    let selectedIds: number[] = [];
 
     const clickHandler = (e: maplibregl.MapMouseEvent) => {
       // empty the temporary IDs from the previous click
@@ -292,20 +297,46 @@ function App() {
       });
       temporaryIds = [];
 
+      // clear selected IDs
+      src.updateData({
+        update: selectedIds.map(id => ({
+          id,
+          removeProperties: ["_selected"],
+        })),
+      });
+      selectedIds = [];
+
       if (currentlyListeningForClickLatLng.current) {
         console.log(e.lngLat);
         setNamespaceParams(prev => ({ ...prev, origin: `${e.lngLat.lat},${e.lngLat.lng}` }));
         currentlyListeningForClickLatLng.current = false;
+        return;
       }
-      else {
-        // console.log(e.lngLat);
-        const features = map.queryRenderedFeatures(e.point, {})
-          .filter(feature => (
-            feature.source === "local-namespace"
-            && feature.properties.kind.startsWith("spaceAtZoom-")
-          ));
-        // console.log(features);
 
+      // console.log(e.lngLat);
+      const lookingForKind = currentMode === "local" ? "localSpace" : "globalSpace";
+      const filteredFeatures = map.queryRenderedFeatures(e.point, {})
+        .filter(feature => (
+          feature.source === "local-namespace"
+          && feature.properties._kind === lookingForKind
+        ));
+      const featuresById = new Map(filteredFeatures.map(feature => [feature.id as number, feature]));
+      const features = Array.from(featuresById.values());
+      console.log(features);
+
+      const clickedIds = Array.from(featuresById.keys());
+      selectedIds = clickedIds;
+      console.log("clickedIds", clickedIds);
+      src.updateData({
+        update: clickedIds.map(id => ({
+          id,
+          addOrUpdateProperties: [
+            { key: "_selected", value: "on" },
+          ],
+        })),
+      });
+
+      if (currentMode === "local") {
         // Generate the global ID for the clicked feature
         const zfxys = new Set(features.map(feature => feature.properties!.zfxy));
         const geojsons: GeoJSON.Feature[] = [];
@@ -314,15 +345,15 @@ function App() {
           // const globalId = space.toContainingGlobalSpatialId({ignoreF: true, maxzoom: 25});
           const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
           for (const globalId of globalIds) {
-            const featureId = `global-${globalId.tilehash}`;
+            const featureId = hashCode(`global-${globalId.tilehash}`);
             temporaryIds.push(featureId);
             geojsons.push({
               "type": "Feature",
               "id": featureId,
               "geometry": globalId.toGeoJSON(),
               "properties": {
-                "kind": "globalSpace",
-                "lbl": "off",
+                "_kind": "globalSpace",
+                "_lbl": "off",
                 "zfxy": globalId.zfxyStr,
               },
             });
@@ -333,17 +364,114 @@ function App() {
           add: geojsons,
         });
         setClickedFeatures([...features, ...geojsons]);
+      } else { // currentMode === global
+        const zfxys = new Set(features.map(feature => feature.properties!.zfxy));
+        const toSelect: Set<number> = new Set();
+        const geojsons: GeoJSON.Feature[] = [];
+        for (const zfxy of zfxys) {
+          const space = new LSID.GlobalSpatialId.Space(zfxy);
+          const localIds = namespace.spacesFromGeoJSON(localSpaceZoom, space.toGeoJSON());
+          for (const localId of localIds) {
+            if (localId.zfxy.f !== 0) {
+              continue;
+            }
+            const featureId = hashCode(localId.zfxyStr);
+            toSelect.add(featureId);
+
+            // TODO: this needs to be updated to pull from the one true source of truth
+            // right now, this is just being set to show selected cells on the sidebar,
+            // but the problem is that it could be that the data in `src` is different!!
+            // so we should pull data from `src` and put it in the sidebar, not recreate it.
+            // FIX ME!!!!
+            geojsons.push({
+              "type": "Feature",
+              "id": featureId,
+              "geometry": localId.toGeoJSON(),
+              "properties": {
+                "_kind": "localSpace",
+                "_lbl": "off",
+                "zoom": localSpaceZoom,
+                "zfxy": localId.zfxyStr,
+              },
+            });
+            console.log(`${zfxy} => ${localId.zfxyStr}`);
+          }
+        }
+        selectedIds.push(...Array.from(toSelect));
+        src.updateData({
+          update: selectedIds.map(id => ({
+            id,
+            addOrUpdateProperties: [
+              { key: "_selected", value: "on" },
+            ],
+          })),
+        });
+        setClickedFeatures([...features, ...geojsons]);
       }
     };
     map.on("click", clickHandler);
 
+    let lastGlobalIds: number[] = [];
+    const refreshGlobalIdOverlay = () => {
+      if (currentMode === "local") {
+        // No need to update the map if we are not in global mode
+        return;
+      }
+      src.updateData({
+        remove: lastGlobalIds,
+      });
+      lastGlobalIds = [];
+
+      const bounds = map.getBounds();
+      const globalIds = LSID.GlobalSpatialId.Space.spacesForGeometry({
+        "type": "Polygon",
+        "coordinates": [[
+          [bounds.getWest(), bounds.getSouth()],
+          [bounds.getEast(), bounds.getSouth()],
+          [bounds.getEast(), bounds.getNorth()],
+          [bounds.getWest(), bounds.getNorth()],
+          [bounds.getWest(), bounds.getSouth()],
+        ]],
+      }, globalSpaceZoom);
+      const geojsons: GeoJSON.Feature[] = [];
+      for (const globalId of globalIds) {
+        const featureId = hashCode(`global-${globalId.tilehash}`);
+        lastGlobalIds.push(featureId);
+        geojsons.push({
+          "type": "Feature",
+          "id": featureId,
+          "geometry": globalId.toGeoJSON(),
+          "properties": {
+            "_kind": "globalSpace",
+            "_lbl": "off",
+            "zfxy": globalId.zfxyStr,
+          },
+        });
+      }
+      src.updateData({
+        add: geojsons,
+      });
+    };
+    map.on("moveend", refreshGlobalIdOverlay);
+    refreshGlobalIdOverlay();
+
     return () => {
       map.off("click", clickHandler);
+      map.off("moveend", refreshGlobalIdOverlay);
+      src.updateData({
+        update: selectedIds.map(id => ({
+          id,
+          removeProperties: ["_selected"],
+        })),
+      });
       src.updateData({
         remove: temporaryIds,
       });
+      src.updateData({
+        remove: lastGlobalIds,
+      });
     };
-  }, [map, namespace, globalSpaceZoom]);
+  }, [map, namespace, globalSpaceZoom, currentMode]);
 
   return (
     <div id="App">
@@ -446,7 +574,7 @@ function App() {
                 <input
                   type="range"
                   name="global-zoom"
-                  min={17}
+                  min={18}
                   max={25}
                   step={1}
                   value={globalSpaceZoom}

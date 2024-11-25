@@ -22,6 +22,7 @@ export default [
   },
   stylistic.configs.customize({
     semi: true,
+    braceStyle: "1tbs",
     quotes: "double",
     quoteProps: "consistent",
   }),
