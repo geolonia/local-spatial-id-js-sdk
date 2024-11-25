@@ -471,7 +471,7 @@ function App() {
         remove: lastGlobalIds,
       });
     };
-  }, [map, namespace, globalSpaceZoom, currentMode]);
+  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom]);
 
   return (
     <div id="App">
