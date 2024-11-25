@@ -52,6 +52,7 @@ export class LocalSpatialId {
         this.namespace.scale,
         input,
         (typeof zoom !== 'undefined') ? zoom : DEFAULT_ZOOM,
+        true, // clamp to valid coordinates
       );
     }
 
