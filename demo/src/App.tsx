@@ -1,23 +1,23 @@
-import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
-import { GeoloniaMap } from '@geolonia/embed-react'
-import './App.css'
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, Fragment } from "react";
+import { GeoloniaMap } from "@geolonia/embed-react";
+import "./App.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import * as LSID from "@geolonia/local-spatial-id-js-sdk"
+import * as LSID from "@geolonia/local-spatial-id-js-sdk";
 
-MapboxDraw.constants.classes.CONTROL_BASE  = 'maplibregl-ctrl' as 'mapboxgl-ctrl';
-MapboxDraw.constants.classes.CONTROL_PREFIX = 'maplibregl-ctrl-' as 'mapboxgl-ctrl-';
-MapboxDraw.constants.classes.CONTROL_GROUP = 'maplibregl-ctrl-group' as 'mapboxgl-ctrl-group';
+MapboxDraw.constants.classes.CONTROL_BASE = "maplibregl-ctrl" as "mapboxgl-ctrl";
+MapboxDraw.constants.classes.CONTROL_PREFIX = "maplibregl-ctrl-" as "mapboxgl-ctrl-";
+MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group" as "mapboxgl-ctrl-group";
 
 type NSParams = {
   scale: number;
   origin: string;
   originAngle: number;
-}
+};
 
 const HIDDEN_PROPS = new Set([
-  'kind',
-  'lbl',
+  "kind",
+  "lbl",
 ]);
 function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
   const filteredFeatures = features
@@ -28,19 +28,21 @@ function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
         id: feature.properties!.id ?? `${properties.kind}-${properties.zfxy}`,
       };
     })
-    .filter((f, i, self) => self.findIndex((s) => s.id === f.id) === i);
+    .filter((f, i, self) => self.findIndex(s => s.id === f.id) === i);
   filteredFeatures.sort((a, b) => a.id.localeCompare(b.id));
   return (
-    <div id='click-info'>
+    <div id="click-info">
       <ul>
-        {filteredFeatures.map((feature) => (
+        {filteredFeatures.map(feature => (
           <li key={feature.id}>
             <h3><code>{feature.properties!.kind}</code></h3>
             <dl>
-              {Object.entries(feature.properties || {}).filter(([key]) => !HIDDEN_PROPS.has(key)).map(([key, value]) => (<Fragment key={key}>
-                <dt>{key}</dt>
-                <dd>{value}</dd>
-              </Fragment>))}
+              {Object.entries(feature.properties || {}).filter(([key]) => !HIDDEN_PROPS.has(key)).map(([key, value]) => (
+                <Fragment key={key}>
+                  <dt>{key}</dt>
+                  <dd>{value}</dd>
+                </Fragment>
+              ))}
             </dl>
           </li>
         ))}
@@ -53,12 +55,12 @@ function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
     scale: 150,
-    origin: '35.690128926025096,139.69097558834432',
+    origin: "35.690128926025096,139.69097558834432",
     originAngle: -11,
   });
 
   const namespace = useMemo(() => {
-    const [latitude, longitude] = namespaceParams.origin.split(',').map(Number);
+    const [latitude, longitude] = namespaceParams.origin.split(",").map(Number);
     return new LSID.LocalNamespace({
       scale: namespaceParams.scale,
       origin_latitude: latitude,
@@ -69,16 +71,16 @@ function App() {
 
   const currentlyListeningForClickLatLng = useRef(false);
   const [clickedFeatures, setClickedFeatures] = useState<GeoJSON.Feature[]>([]);
-  const [currentMode, setCurrentMode] = useState<'global' | 'local'>('local');
+  const [currentMode, setCurrentMode] = useState<"global" | "local">("local");
   const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
 
   useLayoutEffect(() => {
     if (!map) return;
 
-    const rootSpace = namespace.space('/0/0/0/0');
+    const rootSpace = namespace.space("/0/0/0/0");
 
-    map.addSource('local-namespace', {
+    map.addSource("local-namespace", {
       "type": "geojson",
       "data": {
         "type": "FeatureCollection",
@@ -104,7 +106,7 @@ function App() {
         "fill-color": ["to-color", ["get", "fill-color"], "#088"],
         "fill-opacity": 0.1,
       },
-    }, 'oc-label-capital');
+    }, "oc-label-capital");
     map.addLayer({
       "id": "local-namespace/polygon-outline",
       "type": "line",
@@ -114,7 +116,7 @@ function App() {
         "line-color": "#088",
         "line-width": 2,
       },
-    }, 'oc-label-capital');
+    }, "oc-label-capital");
     map.addLayer({
       "id": "local-namespace/polygon-label",
       "type": "symbol",
@@ -129,7 +131,7 @@ function App() {
       },
       "paint": {
       },
-    }, 'oc-label-capital');
+    }, "oc-label-capital");
 
     map.fitBounds(rootSpace.toWGS84BBox2D(), {
       padding: 200,
@@ -137,21 +139,23 @@ function App() {
     });
 
     return () => {
-      map.removeLayer('local-namespace/polygon');
-      map.removeLayer('local-namespace/polygon-outline');
-      map.removeLayer('local-namespace/polygon-label');
-      map.removeSource('local-namespace');
-    }
+      map.removeLayer("local-namespace/polygon");
+      map.removeLayer("local-namespace/polygon-outline");
+      map.removeLayer("local-namespace/polygon-label");
+      map.removeSource("local-namespace");
+    };
   }, [map, namespace]);
 
   useEffect(() => {
-    if (!map) { return; }
+    if (!map) {
+      return;
+    }
 
-    const rootSpace = namespace.space('/0/0/0/0');
+    const rootSpace = namespace.space("/0/0/0/0");
     const childrenAtZoom = rootSpace
       .childrenAtZoom(localSpaceZoom)
-      .filter((space) => space.zfxy.f === 0);
-    const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => ({
+      .filter(space => space.zfxy.f === 0);
+    const features: GeoJSON.Feature[] = childrenAtZoom.map(space => ({
       "id": space.zfxyStr,
       "type": "Feature",
       "properties": {
@@ -161,7 +165,7 @@ function App() {
       },
       "geometry": space.toGeoJSON(),
     }));
-    const src = map.getSource('local-namespace') as maplibregl.GeoJSONSource;
+    const src = map.getSource("local-namespace") as maplibregl.GeoJSONSource;
     src.updateData({
       add: features,
     });
@@ -190,7 +194,9 @@ function App() {
         const zfxys: string[] = [];
         const polygons: GeoJSON.Polygon[] = [];
         for (const space of localSpacesAtZoom) {
-          if (space.zfxy.f !== 0) { continue; }
+          if (space.zfxy.f !== 0) {
+            continue;
+          }
           zfxys.push(space.zfxyStr);
           polygons.push(space.toGeoJSON());
         }
@@ -203,11 +209,11 @@ function App() {
             "lbl": "on",
             "id": feature.id + "-localSpaces",
             "fill-color": "#0f0",
-            "zfxys": zfxys.join(', '),
+            "zfxys": zfxys.join(", "),
           },
           "geometry": {
             "type": "MultiPolygon",
-            "coordinates": polygons.map((polygon) => polygon.coordinates),
+            "coordinates": polygons.map(polygon => polygon.coordinates),
           },
         });
 
@@ -218,16 +224,17 @@ function App() {
     };
 
     const createDataUpdateEventHandler = (eventName: string) => {
-      const handler: maplibregl.Listener = (event: { features: GeoJSON.Feature[]}) => {
+      const handler: maplibregl.Listener = (event: { features: GeoJSON.Feature[] }) => {
         const { features } = event;
-        if (eventName === 'draw.delete') {
+        if (eventName === "draw.delete") {
           src.updateData({
-            remove: features.flatMap((feature) => [
+            remove: features.flatMap(feature => [
               `${feature.id}-bounding-space`,
               `${feature.id}-localSpaces`,
             ]),
           });
-        } else {
+        }
+        else {
           updateData(features);
         }
       };
@@ -236,9 +243,9 @@ function App() {
     };
 
     const handlers = [
-      'draw.create',
-      'draw.delete',
-      'draw.update',
+      "draw.create",
+      "draw.delete",
+      "draw.update",
     ].map(createDataUpdateEventHandler);
 
     return () => {
@@ -247,9 +254,9 @@ function App() {
       }
 
       src.updateData({
-        remove: childrenAtZoom.map((space) => space.zfxyStr),
+        remove: childrenAtZoom.map(space => space.zfxyStr),
       });
-    }
+    };
   }, [map, namespace, localSpaceZoom]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
@@ -263,16 +270,18 @@ function App() {
       },
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    map.addControl(draw as any, 'top-right');
+    map.addControl(draw as any, "top-right");
 
-    map.on('load', () => {
+    map.on("load", () => {
       setMap(map);
     });
   }, []);
 
   useEffect(() => {
-    if (!map) { return; }
-    const src = map.getSource('local-namespace') as maplibregl.GeoJSONSource;
+    if (!map) {
+      return;
+    }
+    const src = map.getSource("local-namespace") as maplibregl.GeoJSONSource;
 
     let temporaryIds: string[] = [];
 
@@ -285,19 +294,20 @@ function App() {
 
       if (currentlyListeningForClickLatLng.current) {
         console.log(e.lngLat);
-        setNamespaceParams((prev) => ({...prev, origin: `${e.lngLat.lat},${e.lngLat.lng}`}));
+        setNamespaceParams(prev => ({ ...prev, origin: `${e.lngLat.lat},${e.lngLat.lng}` }));
         currentlyListeningForClickLatLng.current = false;
-      } else {
+      }
+      else {
         // console.log(e.lngLat);
         const features = map.queryRenderedFeatures(e.point, {})
-          .filter((feature) => (
-            feature.source === 'local-namespace' &&
-            feature.properties.kind.startsWith('spaceAtZoom-')
+          .filter(feature => (
+            feature.source === "local-namespace"
+            && feature.properties.kind.startsWith("spaceAtZoom-")
           ));
         // console.log(features);
 
         // Generate the global ID for the clicked feature
-        const zfxys = new Set(features.map((feature) => feature.properties!.zfxy));
+        const zfxys = new Set(features.map(feature => feature.properties!.zfxy));
         const geojsons: GeoJSON.Feature[] = [];
         for (const zfxy of zfxys) {
           const space = namespace.space(zfxy);
@@ -325,10 +335,10 @@ function App() {
         setClickedFeatures([...features, ...geojsons]);
       }
     };
-    map.on('click', clickHandler);
+    map.on("click", clickHandler);
 
     return () => {
-      map.off('click', clickHandler);
+      map.off("click", clickHandler);
       src.updateData({
         remove: temporaryIds,
       });
@@ -336,79 +346,82 @@ function App() {
   }, [map, namespace, globalSpaceZoom]);
 
   return (
-    <div id='App'>
+    <div id="App">
       <GeoloniaMap
         onLoad={mapLoaded}
-        lang='ja'
-        lat='35.68952770997265'
-        lng='139.6917002413105'
-        zoom='13'
-        maxZoom='25'
-        marker='off'
-        mapStyle='geolonia/basic-v1'
+        lang="ja"
+        lat="35.68952770997265"
+        lng="139.6917002413105"
+        zoom="13"
+        maxZoom="25"
+        marker="off"
+        mapStyle="geolonia/basic-v1"
       >
         <GeoloniaMap.Control
-          position='top-left'
-          containerProps={ { className: 'maplibregl-ctrl maplibregl-ctrl-group ' } }
+          position="top-left"
+          containerProps={{ className: "maplibregl-ctrl maplibregl-ctrl-group " }}
         >
-          <div className='map-ctrl-input-form'>
+          <div className="map-ctrl-input-form">
             <h3>ローカル空間設定</h3>
             <form>
               <label>
                 <span>基準点緯度軽度</span>
                 <input
-                  type='text'
-                  name='origin'
+                  type="text"
+                  name="origin"
                   value={namespaceParams.origin}
-                  onFocus={() => {currentlyListeningForClickLatLng.current = true}}
-                  onChange={(ev) => setNamespaceParams((prev) => ({...prev, origin: ev.target.value}))}
+                  onFocus={() => { currentlyListeningForClickLatLng.current = true; }}
+                  onChange={ev => setNamespaceParams(prev => ({ ...prev, origin: ev.target.value }))}
                 />
               </label>
               <label>
                 <span>角度</span>
-                <div className='input-range-wrapper'>
+                <div className="input-range-wrapper">
                   <input
-                    type='range'
-                    name='originAngle'
+                    type="range"
+                    name="originAngle"
                     value={namespaceParams.originAngle}
                     min={-180}
                     max={180}
                     step={1}
-                    list='angle-list'
-                    onChange={(ev) => setNamespaceParams((prev) => ({...prev, originAngle: Number(ev.target.value)}))}
+                    list="angle-list"
+                    onChange={ev => setNamespaceParams(prev => ({ ...prev, originAngle: Number(ev.target.value) }))}
                   />
-                  <datalist id='angle-list'>
-                    <option value='-180' label='-180°' />
-                    <option value='-90' label='-90°' />
-                    <option value='0' label='0°' />
-                    <option value='90' label='90°' />
-                    <option value='180' label='180°' />
+                  <datalist id="angle-list">
+                    <option value="-180" label="-180°" />
+                    <option value="-90" label="-90°" />
+                    <option value="0" label="0°" />
+                    <option value="90" label="90°" />
+                    <option value="180" label="180°" />
                   </datalist>
                 </div>
-                {namespaceParams.originAngle}°
+                {namespaceParams.originAngle}
+                °
               </label>
               <label>
                 <span>スケール</span>
                 <input
-                  type='text'
-                  name='scale'
+                  type="text"
+                  name="scale"
                   value={namespaceParams.scale}
-                  onChange={(ev) => setNamespaceParams((prev) => ({...prev, scale: Number(ev.target.value)}))}
+                  onChange={ev => setNamespaceParams(prev => ({ ...prev, scale: Number(ev.target.value) }))}
                 />
               </label>
             </form>
           </div>
         </GeoloniaMap.Control>
         <GeoloniaMap.Control
-          position='top-left'
-          containerProps={ { className: 'maplibregl-ctrl maplibregl-ctrl-group ' } }
+          position="top-left"
+          containerProps={{ className: "maplibregl-ctrl maplibregl-ctrl-group " }}
         >
-          <div className='map-ctrl-input-form'>
+          <div className="map-ctrl-input-form">
             <form>
               <label>
-                モード: <select value={currentMode} onChange={(ev) => setCurrentMode(ev.currentTarget.value as "global" | "local")}>
-                  <option value={'global'}>グローバル</option>
-                  <option value={'local'}>ローカル</option>
+                モード:
+                {" "}
+                <select value={currentMode} onChange={ev => setCurrentMode(ev.currentTarget.value as "global" | "local")}>
+                  <option value="global">グローバル</option>
+                  <option value="local">ローカル</option>
                 </select>
               </label>
             </form>
@@ -416,13 +429,13 @@ function App() {
             <form>
               <label>
                 <input
-                  type='range'
-                  name='internal-zoom'
+                  type="range"
+                  name="internal-zoom"
                   min={0}
                   max={6}
                   step={1}
                   value={localSpaceZoom}
-                  onChange={(ev) => setLocalSpaceZoom(Number(ev.target.value))}
+                  onChange={ev => setLocalSpaceZoom(Number(ev.target.value))}
                 />
                 {localSpaceZoom}
               </label>
@@ -431,13 +444,13 @@ function App() {
             <form>
               <label>
                 <input
-                  type='range'
-                  name='global-zoom'
+                  type="range"
+                  name="global-zoom"
                   min={17}
                   max={25}
                   step={1}
                   value={globalSpaceZoom}
-                  onChange={(ev) => setGlobalSpaceZoom(Number(ev.target.value))}
+                  onChange={ev => setGlobalSpaceZoom(Number(ev.target.value))}
                 />
                 {globalSpaceZoom}
               </label>
@@ -445,17 +458,17 @@ function App() {
           </div>
         </GeoloniaMap.Control>
         <GeoloniaMap.Control
-          position='top-left'
-          containerProps={ { className: 'maplibregl-ctrl maplibregl-ctrl-group map-ctrl-click-info' } }
+          position="top-left"
+          containerProps={{ className: "maplibregl-ctrl maplibregl-ctrl-group map-ctrl-click-info" }}
         >
-          <div className='map-ctrl-input-form'>
+          <div className="map-ctrl-input-form">
             <h3>詳細情報</h3>
             <RenderClickedFeatures features={clickedFeatures} />
           </div>
         </GeoloniaMap.Control>
       </GeoloniaMap>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
