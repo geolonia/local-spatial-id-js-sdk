@@ -13,6 +13,12 @@ export const namespaces: { [key: string]: LocalNamespace } = {
     origin_longitude: 139.69188, // 139.69172572944066,
     origin_angle: 45,
   }),
+  "tokyo_tocho_300m": new LocalNamespace({
+    scale: 150,
+    origin_altitude: 300, // 都庁の標高から300m高いスペースから、150m正方形のスペースを作成
+    origin_latitude: 35.690128926025096,
+    origin_longitude: 139.69097558834432,
+  }),
 };
 
 export const geoJsons: { [key: string]: GeoJSON.Feature } = {
