@@ -99,6 +99,9 @@ export class LocalSpatialId {
 
   parent(atZoom?: number) {
     const steps = (typeof atZoom === 'undefined') ? 1 : this.zfxy.z - atZoom;
+    if (steps < 0) {
+      throw new Error(`Getting parent tile of ${this.zfxy} at zoom ${atZoom} is not possible`);
+    }
     return new LocalSpatialId(this.namespace, getParent(this.zfxy, steps));
   }
 
@@ -162,8 +165,7 @@ export class LocalSpatialId {
     const bbox = this.toWGS84BBox();
     const xyzTile = bboxToTile(bbox);
 
-    // ignore F changes for this calculation
-    const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile), true);
+    const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile));
 
     return tiles
       .map((tile) => new SpatialId.Space(tile))
@@ -211,8 +213,8 @@ export class LocalSpatialId {
     const bbox = this.toWGS84BBox2D();
 
     const scale = this.namespace.scale;
-    const f0 = this.zfxy.f * scale;
-    const f1 = (this.zfxy.f + 1) * scale;
+    const f0 = this.namespace.origin.altitude + (this.zfxy.f * scale);
+    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * scale);
 
     return [
       bbox[0], bbox[1], f0,

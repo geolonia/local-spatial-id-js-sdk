@@ -13,6 +13,7 @@ MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group" as "mapboxg
 type NSParams = {
   scale: number;
   origin: string;
+  originAltitude: number;
   originAngle: number;
 };
 
@@ -53,6 +54,7 @@ function App() {
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
     scale: 150,
     origin: "35.690128926025096,139.69097558834432",
+    originAltitude: 0,
     originAngle: -11,
   });
 
@@ -62,6 +64,7 @@ function App() {
       scale: namespaceParams.scale,
       origin_latitude: latitude,
       origin_longitude: longitude,
+      origin_altitude: namespaceParams.originAltitude,
       origin_angle: namespaceParams.originAngle,
     });
   }, [namespaceParams]);
@@ -368,7 +371,15 @@ function App() {
           const space = namespace.space(zfxy);
           // const globalId = space.toContainingGlobalSpatialId({ignoreF: true, maxzoom: 25});
           const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
+          // この配列に縦方向も含めてすべてのグローバルIDが含まれているが、輪切り表示ということで
+          // Fでフィルタしたい。
+          // 暫定的に min(f) でフィルタする
+          const minF = Math.min(...globalIds.map(globalId => globalId.zfxy.f));
+          console.log(`minF: ${minF}`);
           for (const globalId of globalIds) {
+            if (globalId.zfxy.f !== minF) {
+              continue;
+            }
             const featureId = hashCode(`global-${globalId.tilehash}`);
             temporaryIds.push(featureId);
             geojsons.push({
@@ -525,6 +536,18 @@ function App() {
                   value={namespaceParams.origin}
                   onFocus={() => { currentlyListeningForClickLatLng.current = true; }}
                   onChange={ev => setNamespaceParams(prev => ({ ...prev, origin: ev.target.value }))}
+                />
+              </label>
+              <label>
+                <span>基準点標高</span>
+                <input
+                  type="text"
+                  name="originAltitude"
+                  value={namespaceParams.originAltitude}
+                  onChange={ev => setNamespaceParams(prev => ({
+                    ...prev,
+                    originAltitude: Number(ev.target.value),
+                  }))}
                 />
               </label>
               <label>
