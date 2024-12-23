@@ -50,24 +50,24 @@ describe('LocalSpatialId', () => {
     assert.deepStrictEqual(globalIds.map((id) => id.zfxyStr), [
       '/11/0/1818/806',
       '/11/0/1819/806',
-      '/11/1/1818/806',
-      '/11/1/1819/806',
     ]);
   });
 
   test("toGlobalSpatialIds with namespace elevation set", () => {
     const namespace = namespaces.tokyo_tocho_300m;
-    const space = namespace.space('/15/0/0/0');
+    const space = namespace.space('/3/0/0/0');
     const globalIds = space.toGlobalSpatialIds(20);
     assert.deepStrictEqual(globalIds.map((id) => id.zfxyStr), [
-      '/20/8/931167/412874',
       '/20/9/931167/412874',
-      '/20/10/931167/412874',
-      '/20/11/931167/412874',
-      '/20/12/931167/412874',
-      '/20/13/931167/412874',
-      '/20/14/931167/412874',
-      '/20/15/931167/412874',
+      '/20/9/931168/412874',
     ]);
+    const localBBox = space.toWGS84BBox();
+    assert.strictEqual(localBBox[2], 300);
+    assert.strictEqual(localBBox[5], 318.75);
+
+    const global = globalIds[0];
+    assert.strictEqual(global.zfxy.z, 20);
+    assert.strictEqual(global.altMin, 288);
+    assert.strictEqual(global.altMax, 320);
   });
 });

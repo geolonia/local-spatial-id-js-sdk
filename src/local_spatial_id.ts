@@ -169,7 +169,16 @@ export class LocalSpatialId {
 
     return tiles
       .map((tile) => new SpatialId.Space(tile))
-      .filter((space) => booleanIntersects(space.toGeoJSON(), geometry));
+      .filter((space) => {
+        // whether the 2D geometry intersects the tile
+        const geomIntersects = booleanIntersects(space.toGeoJSON(), geometry);
+
+        // whether the height of the geometry intersects the tile
+        // bbox[2] is the min height, bbox[5] is the max height
+        // space.altMin and space.altMax are the min and max heights of the tile
+        const heightIntersects = bbox[2] <= space.altMax && bbox[5] >= space.altMin;
+        return geomIntersects && heightIntersects;
+      });
   }
 
   toGeoJSON(): GeoJSON.Polygon {
@@ -213,12 +222,13 @@ export class LocalSpatialId {
     const bbox = this.toWGS84BBox2D();
 
     const scale = this.namespace.scale;
-    const f0 = this.namespace.origin.altitude + (this.zfxy.f * scale);
-    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * scale);
+    const meters = tile2meters(scale, this.zfxy.z);
+    const f0 = this.namespace.origin.altitude + (this.zfxy.f * meters);
+    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * meters);
 
     return [
-      bbox[0], bbox[1], f0,
-      bbox[2], bbox[3], f1,
+      bbox[0], bbox[1], f0, //min
+      bbox[2], bbox[3], f1, //max
     ];
   }
 

@@ -32,7 +32,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "@spatial-id/javascript-sdk": "github:spatial-id/javascript-sdk",
+    "@spatial-id/javascript-sdk": "github:geolonia/spatial-id-js-sdk",
     "@turf/bbox": "^6.5.0",
     "@turf/bbox-polygon": "^6.5.0",
     "@turf/boolean-contains": "^6.5.0",

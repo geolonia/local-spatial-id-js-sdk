@@ -92,6 +92,7 @@ function App() {
       "id": "local-namespace/polygon",
       "type": "fill",
       "source": "local-namespace",
+      "filter": ["!", ["has", "min_altitude"]],
       "layout": {},
       "paint": {
         "fill-color": [
@@ -140,6 +141,43 @@ function App() {
       },
     }, "oc-label-capital");
 
+    map.addLayer({
+      "id": "local-namespace/polygon-extrusion/selected",
+      "type": "fill-extrusion",
+      "source": "local-namespace",
+      "filter": ["all", ["has", "min_altitude"], ["==", ["get", "_selected"], "on"]],
+      "layout": {},
+      "paint": {
+        "fill-extrusion-color": [
+          "to-color",
+          ["get", "fill-color"],
+          ["match", ["get", "_kind"], "globalSpace", "#808", "#088"],
+          "#088",
+        ],
+        "fill-extrusion-opacity": 0.5,
+        "fill-extrusion-base": ["get", "min_altitude"],
+        "fill-extrusion-height": ["get", "max_altitude"],
+      },
+    }, "oc-label-capital");
+    map.addLayer({
+      "id": "local-namespace/polygon-extrusion",
+      "type": "fill-extrusion",
+      "source": "local-namespace",
+      "filter": ["has", "min_altitude"],
+      "layout": {},
+      "paint": {
+        "fill-extrusion-color": [
+          "to-color",
+          ["get", "fill-color"],
+          ["match", ["get", "_kind"], "globalSpace", "#808", "#088"],
+          "#088",
+        ],
+        "fill-extrusion-opacity": 0.1,
+        "fill-extrusion-base": ["get", "min_altitude"],
+        "fill-extrusion-height": ["get", "max_altitude"],
+      },
+    }, "oc-label-capital");
+
     map.fitBounds(rootSpace.toWGS84BBox2D(), {
       padding: 200,
       duration: 0, // disable animation
@@ -147,6 +185,8 @@ function App() {
 
     return () => {
       map.removeLayer("local-namespace/polygon");
+      map.removeLayer("local-namespace/polygon-extrusion");
+      map.removeLayer("local-namespace/polygon-extrusion/selected");
       map.removeLayer("local-namespace/polygon-outline");
       map.removeLayer("local-namespace/polygon-label");
       map.removeSource("local-namespace");
@@ -162,17 +202,22 @@ function App() {
     const childrenAtZoom = rootSpace
       .childrenAtZoom(localSpaceZoom)
       .filter(space => space.zfxy.f === 0);
-    const features: GeoJSON.Feature[] = childrenAtZoom.map(space => ({
-      "id": hashCode(space.zfxyStr),
-      "type": "Feature",
-      "properties": {
-        "_kind": "localSpace",
-        "_lbl": "on",
-        "zoom": localSpaceZoom,
-        "zfxy": space.zfxyStr,
-      },
-      "geometry": space.toGeoJSON(),
-    }));
+    const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => {
+      const bbox = space.toWGS84BBox();
+      return {
+        "id": hashCode(space.zfxyStr),
+        "type": "Feature",
+        "properties": {
+          "_kind": "localSpace",
+          "_lbl": "on",
+          "zoom": localSpaceZoom,
+          "zfxy": space.zfxyStr,
+          "min_altitude": bbox[2],
+          "max_altitude": bbox[5],
+        },
+        "geometry": space.toGeoJSON(),
+      };
+    });
     const src = map.getSource("local-namespace") as maplibregl.GeoJSONSource;
     src.updateData({
       add: features,
@@ -267,6 +312,8 @@ function App() {
   }, [map, namespace, localSpaceZoom]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
+    map.setMaxPitch(80);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any)._mainMap = map;
     const draw = new MapboxDraw({
@@ -370,12 +417,14 @@ function App() {
         for (const zfxy of zfxys) {
           const space = namespace.space(zfxy);
           // const globalId = space.toContainingGlobalSpatialId({ignoreF: true, maxzoom: 25});
+          console.time("toGlobalSpatialIds");
           const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
+          console.timeEnd("toGlobalSpatialIds");
           // この配列に縦方向も含めてすべてのグローバルIDが含まれているが、輪切り表示ということで
           // Fでフィルタしたい。
           // 暫定的に min(f) でフィルタする
           const minF = Math.min(...globalIds.map(globalId => globalId.zfxy.f));
-          console.log(`minF: ${minF}`);
+          console.log(`minF: ${minF}, globalIds: ${globalIds.length}`);
           for (const globalId of globalIds) {
             if (globalId.zfxy.f !== minF) {
               continue;
@@ -389,7 +438,10 @@ function App() {
               "properties": {
                 "_kind": "globalSpace",
                 "_lbl": "off",
+                "_selected": "on",
                 "zfxy": globalId.zfxyStr,
+                "min_altitude": globalId.altMin,
+                "max_altitude": globalId.altMax,
               },
             });
             console.log(`${zfxy} => ${globalId.zfxyStr}`);
@@ -413,6 +465,8 @@ function App() {
             const featureId = hashCode(localId.zfxyStr);
             toSelect.add(featureId);
 
+            const bbox = localId.toWGS84BBox();
+
             // TODO: this needs to be updated to pull from the one true source of truth
             // right now, this is just being set to show selected cells on the sidebar,
             // but the problem is that it could be that the data in `src` is different!!
@@ -427,6 +481,8 @@ function App() {
                 "_lbl": "off",
                 "zoom": localSpaceZoom,
                 "zfxy": localId.zfxyStr,
+                "min_altitude": bbox[2],
+                "max_altitude": bbox[5],
               },
             });
             console.log(`${zfxy} => ${localId.zfxyStr}`);
