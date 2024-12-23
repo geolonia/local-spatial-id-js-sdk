@@ -94,6 +94,8 @@ function App() {
       },
     });
 
+    const INSERT_BEFORE_LAYER_ID = "oc-label-capital";
+
     map.addLayer({
       "id": "local-namespace/polygon",
       "type": "fill",
@@ -115,7 +117,7 @@ function App() {
           0.1,
         ],
       },
-    }, "oc-label-capital");
+    }, INSERT_BEFORE_LAYER_ID);
     map.addLayer({
       "id": "local-namespace/polygon-outline",
       "type": "line",
@@ -130,7 +132,7 @@ function App() {
         ],
         "line-width": 2,
       },
-    }, "oc-label-capital");
+    }, INSERT_BEFORE_LAYER_ID);
     map.addLayer({
       "id": "local-namespace/polygon-label",
       "type": "symbol",
@@ -145,7 +147,7 @@ function App() {
       },
       "paint": {
       },
-    }, "oc-label-capital");
+    }, INSERT_BEFORE_LAYER_ID);
 
     map.addLayer({
       "id": "local-namespace/polygon-extrusion-local/selected",
@@ -164,7 +166,7 @@ function App() {
         "fill-extrusion-base": ["get", "min_altitude"],
         "fill-extrusion-height": ["get", "max_altitude"],
       },
-    }, "oc-label-capital");
+    }, INSERT_BEFORE_LAYER_ID);
     map.addLayer({
       "id": "local-namespace/polygon-extrusion-global/selected",
       "type": "fill-extrusion",
@@ -182,7 +184,7 @@ function App() {
         "fill-extrusion-base": ["get", "min_altitude"],
         "fill-extrusion-height": ["get", "max_altitude"],
       },
-    }, "oc-label-capital");
+    }, INSERT_BEFORE_LAYER_ID);
     map.addLayer({
       "id": "local-namespace/polygon-extrusion",
       "type": "fill-extrusion",
@@ -200,7 +202,27 @@ function App() {
         "fill-extrusion-base": ["get", "min_altitude"],
         "fill-extrusion-height": ["get", "max_altitude"],
       },
-    }, "oc-label-capital");
+    }, INSERT_BEFORE_LAYER_ID);
+
+    map.addLayer({
+      "id": "local-namespace/building-3d",
+      "type": "fill-extrusion",
+      "source": "geolonia",
+      "source-layer": "building",
+      "minzoom": 13,
+      "paint": {
+        "fill-extrusion-color": "#D7D4D1",
+        "fill-extrusion-height": [
+          "get",
+          "render_height",
+        ],
+        "fill-extrusion-base": [
+          "get",
+          "render_min_height",
+        ],
+        "fill-extrusion-opacity": 0.2,
+      },
+    }, INSERT_BEFORE_LAYER_ID);
 
     map.fitBounds(rootSpace.toWGS84BBox2D(), {
       padding: 200,
@@ -208,6 +230,7 @@ function App() {
     });
 
     return () => {
+      map.removeLayer("local-namespace/building-3d");
       const layerIds = map.getStyle().layers?.filter(l => "source" in l && l.source === "local-namespace").map(l => l.id);
       for (const layerId of layerIds ?? []) {
         map.removeLayer(layerId);
