@@ -74,6 +74,7 @@ function App() {
   const [currentMode, setCurrentMode] = useState<"global" | "local">("local");
   const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
+  const [interestedLocalF, setInterestedLocalF] = useState(0);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -142,10 +143,28 @@ function App() {
     }, "oc-label-capital");
 
     map.addLayer({
-      "id": "local-namespace/polygon-extrusion/selected",
+      "id": "local-namespace/polygon-extrusion-local/selected",
       "type": "fill-extrusion",
       "source": "local-namespace",
-      "filter": ["all", ["has", "min_altitude"], ["==", ["get", "_selected"], "on"]],
+      "filter": ["all", ["has", "min_altitude"], ["==", ["get", "_selected"], "on"], ["==", ["get", "_kind"], "localSpace"]],
+      "layout": {},
+      "paint": {
+        "fill-extrusion-color": [
+          "to-color",
+          ["get", "fill-color"],
+          ["match", ["get", "_kind"], "globalSpace", "#808", "#088"],
+          "#088",
+        ],
+        "fill-extrusion-opacity": 0.5,
+        "fill-extrusion-base": ["get", "min_altitude"],
+        "fill-extrusion-height": ["get", "max_altitude"],
+      },
+    }, "oc-label-capital");
+    map.addLayer({
+      "id": "local-namespace/polygon-extrusion-global/selected",
+      "type": "fill-extrusion",
+      "source": "local-namespace",
+      "filter": ["all", ["has", "min_altitude"], ["==", ["get", "_selected"], "on"], ["==", ["get", "_kind"], "globalSpace"]],
       "layout": {},
       "paint": {
         "fill-extrusion-color": [
@@ -184,11 +203,10 @@ function App() {
     });
 
     return () => {
-      map.removeLayer("local-namespace/polygon");
-      map.removeLayer("local-namespace/polygon-extrusion");
-      map.removeLayer("local-namespace/polygon-extrusion/selected");
-      map.removeLayer("local-namespace/polygon-outline");
-      map.removeLayer("local-namespace/polygon-label");
+      const layerIds = map.getStyle().layers?.filter(l => "source" in l && l.source === "local-namespace").map(l => l.id);
+      for (const layerId of layerIds ?? []) {
+        map.removeLayer(layerId);
+      }
       map.removeSource("local-namespace");
     };
   }, [map, namespace]);
@@ -420,15 +438,7 @@ function App() {
           console.time("toGlobalSpatialIds");
           const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
           console.timeEnd("toGlobalSpatialIds");
-          // この配列に縦方向も含めてすべてのグローバルIDが含まれているが、輪切り表示ということで
-          // Fでフィルタしたい。
-          // 暫定的に min(f) でフィルタする
-          const minF = Math.min(...globalIds.map(globalId => globalId.zfxy.f));
-          console.log(`minF: ${minF}, globalIds: ${globalIds.length}`);
           for (const globalId of globalIds) {
-            if (globalId.zfxy.f !== minF) {
-              continue;
-            }
             const featureId = hashCode(`global-${globalId.tilehash}`);
             temporaryIds.push(featureId);
             geojsons.push({
