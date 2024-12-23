@@ -28,10 +28,15 @@ function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
   //   })
   //   .filter((f, i, self) => self.findIndex(s => s.id === f.id) === i);
   // filteredFeatures.sort((a, b) => a.id.localeCompare(b.id));
+  const uniqueFeatureMap = new Map<number, GeoJSON.Feature>();
+  for (const feature of features) {
+    uniqueFeatureMap.set(feature.id as number, feature);
+  }
+  const uniqueFeatures = Array.from(uniqueFeatureMap.values());
   return (
     <div id="click-info">
       <ul>
-        {features.map(feature => (
+        {uniqueFeatures.map(feature => (
           <li key={feature.id}>
             <h3><code>{feature.properties!._kind}</code></h3>
             <dl>
@@ -191,7 +196,7 @@ function App() {
           ["match", ["get", "_kind"], "globalSpace", "#808", "#088"],
           "#088",
         ],
-        "fill-extrusion-opacity": 0.1,
+        "fill-extrusion-opacity": 0.2,
         "fill-extrusion-base": ["get", "min_altitude"],
         "fill-extrusion-height": ["get", "max_altitude"],
       },
@@ -219,7 +224,7 @@ function App() {
     const rootSpace = namespace.space("/0/0/0/0");
     const childrenAtZoom = rootSpace
       .childrenAtZoom(localSpaceZoom)
-      .filter(space => space.zfxy.f === 0);
+      .filter(space => space.zfxy.f === interestedLocalF);
     const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => {
       const bbox = space.toWGS84BBox();
       return {
@@ -327,7 +332,7 @@ function App() {
         remove: childrenAtZoom.map(space => hashCode(space.zfxyStr)),
       });
     };
-  }, [map, namespace, localSpaceZoom]);
+  }, [map, namespace, localSpaceZoom, interestedLocalF]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
     map.setMaxPitch(80);
@@ -469,7 +474,7 @@ function App() {
           const space = new LSID.GlobalSpatialId.Space(zfxy);
           const localIds = namespace.spacesFromGeoJSON(localSpaceZoom, space.toGeoJSON());
           for (const localId of localIds) {
-            if (localId.zfxy.f !== 0) {
+            if (localId.zfxy.f !== interestedLocalF) {
               continue;
             }
             const featureId = hashCode(localId.zfxyStr);
@@ -573,7 +578,7 @@ function App() {
       });
       setClickedFeatures([]);
     };
-  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom]);
+  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF]);
 
   return (
     <div id="App">
@@ -682,6 +687,18 @@ function App() {
                 {localSpaceZoom}
               </label>
             </form>
+            <label>
+              <span>ローカル空間の表示するF値</span>
+              <input
+                type="number"
+                name="interestedLocalF"
+                min={0}
+                max={Math.pow(2, localSpaceZoom) - 1}
+                value={interestedLocalF}
+                onChange={ev => setInterestedLocalF(Number(ev.target.value))}
+              />
+            </label>
+            <hr />
             <h3>グローバル空間分解能</h3>
             <form>
               <label>
