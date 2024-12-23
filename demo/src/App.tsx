@@ -355,23 +355,23 @@ function App() {
       //   "url": "https://tileserver.geolonia.com/gsi-dem/tiles.json?key=YOUR-API-KEY",
       //   "attribution": "<a href=\"https://www.gsi.go.jp/\" target=\"_blank\">&copy; GSI Japan</a>",
       // });
-      map.addSource("terrainDem", {
-        "type": "raster-dem",
-        "url": "https://tileserver.geolonia.com/gsi-dem/tiles.json?key=YOUR-API-KEY",
-        "attribution": "<a href=\"https://www.gsi.go.jp/\" target=\"_blank\">&copy; GSI Japan</a>",
-      });
-      map.setTerrain({ "source": "terrainDem", "exaggeration": 1 });
-      map.addLayer({
-        "id": "hillshading2",
-        "source": "dem",
-        "type": "hillshade",
-        "maxzoom": 22,
-        "paint": {
-          "hillshade-exaggeration": 0.5,
-          "hillshade-shadow-color": "#000",
-          "hillshade-highlight-color": "#fff",
-        },
-      }, "hillshading");
+      // map.addSource("terrainDem", {
+      //   "type": "raster-dem",
+      //   "url": "https://tileserver.geolonia.com/gsi-dem/tiles.json?key=YOUR-API-KEY",
+      //   "attribution": "<a href=\"https://www.gsi.go.jp/\" target=\"_blank\">&copy; GSI Japan</a>",
+      // });
+      // map.setTerrain({ "source": "terrainDem", "exaggeration": 1 });
+      // map.addLayer({
+      //   "id": "hillshading2",
+      //   "source": "dem",
+      //   "type": "hillshade",
+      //   "maxzoom": 22,
+      //   "paint": {
+      //     "hillshade-exaggeration": 0.5,
+      //     "hillshade-shadow-color": "#000",
+      //     "hillshade-highlight-color": "#fff",
+      //   },
+      // }, "hillshading");
       map.removeLayer("hillshading");
 
       setMap(map);
