@@ -623,7 +623,7 @@ function App() {
             <h3>ローカル空間設定</h3>
             <form>
               <label>
-                <span>基準点緯度軽度</span>
+                <span>基準点緯度経度</span>
                 <input
                   type="text"
                   name="origin"
