@@ -695,7 +695,7 @@ function App() {
                 </select>
               </label>
             </form>
-            <h3>空間内分解能</h3>
+            <h3>ズームレベル（Z）</h3>
             <form>
               <label>
                 <input
@@ -722,7 +722,7 @@ function App() {
               />
             </label>
             <hr />
-            <h3>グローバル空間分解能</h3>
+            <h3>グローバルズームレベル（Z）</h3>
             <form>
               <label>
                 <input
