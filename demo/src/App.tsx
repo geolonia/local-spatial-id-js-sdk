@@ -669,7 +669,7 @@ function App() {
                 °
               </label>
               <label>
-                <span>スケール</span>
+                <span>全体範囲（X,Y; 水平）</span>
                 <input
                   type="text"
                   name="scale"
