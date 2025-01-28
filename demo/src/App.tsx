@@ -80,6 +80,8 @@ function App() {
   const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
+  const [voxelHeight, setVoxelHeight] = useState(0);
+  const [voxelHeightManual, setVoxelHeightManual] = useState(0);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -250,6 +252,9 @@ function App() {
       .filter(space => space.zfxy.f === interestedLocalF);
     const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => {
       const bbox = space.toWGS84BBox();
+      const maxAltitude = voxelHeightManual ? bbox[2] + voxelHeightManual : bbox[5];
+      setVoxelHeight(maxAltitude - bbox[2]);
+
       return {
         "id": hashCode(space.zfxyStr),
         "type": "Feature",
@@ -259,11 +264,12 @@ function App() {
           "zoom": localSpaceZoom,
           "zfxy": space.zfxyStr,
           "min_altitude": bbox[2],
-          "max_altitude": bbox[5],
+          "max_altitude": maxAltitude,
         },
         "geometry": space.toGeoJSON(),
       };
     });
+    console.log(features);
     const src = map.getSource("local-namespace") as maplibregl.GeoJSONSource;
     src.updateData({
       add: features,
@@ -355,7 +361,7 @@ function App() {
         remove: childrenAtZoom.map(space => hashCode(space.zfxyStr)),
       });
     };
-  }, [map, namespace, localSpaceZoom, interestedLocalF]);
+  }, [map, namespace, localSpaceZoom, interestedLocalF, voxelHeight, voxelHeightManual]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
     map.setMaxPitch(80);
@@ -520,7 +526,7 @@ function App() {
                 "zoom": localSpaceZoom,
                 "zfxy": localId.zfxyStr,
                 "min_altitude": bbox[2],
-                "max_altitude": bbox[5],
+                "max_altitude": voxelHeightManual ? bbox[2] + voxelHeightManual : bbox[5],
               },
             });
             console.log(`${zfxy} => ${localId.zfxyStr}`);
@@ -601,7 +607,7 @@ function App() {
       });
       setClickedFeatures([]);
     };
-  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF]);
+  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight]);
 
   return (
     <div id="App">
@@ -721,6 +727,18 @@ function App() {
                 onChange={ev => setInterestedLocalF(Number(ev.target.value))}
               />
             </label>
+            <div>
+              <label>
+                <span>ボクセルの高さ（m）</span>
+                <input
+                  type="number"
+                  name="voxelHeight"
+                  min={0}
+                  value={voxelHeightManual || voxelHeight}
+                  onChange={ev => setVoxelHeightManual(Number(ev.target.value))}
+                />
+              </label>
+            </div>
             <hr />
             <h3>グローバルズームレベル（Z）</h3>
             <form>
