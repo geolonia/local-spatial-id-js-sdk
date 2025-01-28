@@ -607,7 +607,7 @@ function App() {
       });
       setClickedFeatures([]);
     };
-  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight]);
+  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight, voxelHeightManual]);
 
   return (
     <div id="App">
