@@ -16,7 +16,8 @@
   ],
   "scripts": {
     "build": "shx rm -rf dist && rollup -c",
-    "test": "node --test --import tsx './src/**/*.test.ts'"
+    "test": "node --test --import tsx './src/**/*.test.ts'",
+    "test:mac": "node --test --import tsx $(find src -name \"*.test.ts\")"
   },
   "repository": {
     "type": "git",

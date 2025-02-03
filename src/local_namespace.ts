@@ -59,7 +59,7 @@ export class LocalNamespace {
     this.scaleHeight = options.scaleHeight ?? options.scale;
     this.name = options.name;
     this.description = options.description;
-    if (options.origin_latitude && options.origin_longitude) {
+    if (options.origin_latitude !== undefined && options.origin_longitude !== undefined) {
       this.origin = {
         latitude: options.origin_latitude,
         longitude: options.origin_longitude,
