@@ -29,6 +29,9 @@ interface LocalNamespaceOptions {
   /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
   scale: number
 
+  // 高さ方向のローカル空間全体の最大長さをメートルで指定。（メートル）。指定しない場合は scale と同じ値が使用されます。
+  scaleHeight?: number
+
   name?: string
   description?: string
 

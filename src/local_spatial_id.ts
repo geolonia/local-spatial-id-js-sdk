@@ -38,7 +38,7 @@ export class LocalSpatialId {
   constructor(namespace: LocalNamespace, input: LocalSpatialIdInput, zoom?: number) {
     this.namespace = namespace;
     if (typeof input === 'string') {
-      // parse string
+      // 文字列から ZFXY をパース
       let zfxy = parseZFXYString(input) || parseZFXYTilehash(input);
       if (zfxy) {
         this.zfxy = zfxy;
@@ -50,6 +50,7 @@ export class LocalSpatialId {
     } else {
       this.zfxy = calculateLocalZFXY(
         this.namespace.scale,
+        this.namespace.scaleHeight,
         input,
         (typeof zoom !== 'undefined') ? zoom : DEFAULT_ZOOM,
         true, // clamp to valid coordinates
@@ -62,27 +63,27 @@ export class LocalSpatialId {
   /* - PUBLIC API - */
 
   up(by: number = 1) {
-    return this.move({f: by});
+    return this.move({ f: by });
   }
 
   down(by: number = 1) {
-    return this.move({f: -by});
+    return this.move({ f: -by });
   }
 
   north(by: number = 1) {
-    return this.move({y: by});
+    return this.move({ y: by });
   }
 
   south(by: number = 1) {
-    return this.move({y: -by});
+    return this.move({ y: -by });
   }
 
   east(by: number = 1) {
-    return this.move({x: by});
+    return this.move({ x: by });
   }
 
   west(by: number = 1) {
-    return this.move({x: -by});
+    return this.move({ x: -by });
   }
 
   move(by: Partial<Omit<ZFXYTile, 'z'>>) {
@@ -121,12 +122,11 @@ export class LocalSpatialId {
       const theirTilehash = input.tilehash;
       return theirTilehash.startsWith(this.tilehash);
     }
-    // this is a GeoJSON.Geometry
+    // GeoJSON.Geometry の場合
 
-    // Get the GeoJSON feature of our geometry
+    // 自身のジオメトリを GeoJSON として取得
     const polygon = this.toGeoJSON();
 
-    // Check if the input geometry contains our GeoJSON feature
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
 
@@ -137,12 +137,11 @@ export class LocalSpatialId {
     if (input instanceof LocalSpatialId) {
       throw new Error("not implemented");
     }
-    // this is a GeoJSON.Geometry
+    // GeoJSON.Geometry の場合
 
-    // Get the GeoJSON feature of our geometry
+    // 自身のジオメトリを GeoJSON として取得
     const polygon = this.toGeoJSON();
 
-    // Check if the input geometry intersects our GeoJSON feature
     if (input.type === 'GeometryCollection')
       throw new Error("GeometryCollection is not supported");
 
@@ -161,21 +160,17 @@ export class LocalSpatialId {
 
   toGlobalSpatialIds(zoom: number) {
     const geometry = this.toGeoJSON();
-
     const bbox = this.toWGS84BBox();
     const xyzTile = bboxToTile(bbox);
-
     const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile));
 
     return tiles
       .map((tile) => new SpatialId.Space(tile))
       .filter((space) => {
-        // whether the 2D geometry intersects the tile
+        // 2Dジオメトリの交差判定
         const geomIntersects = booleanIntersects(space.toGeoJSON(), geometry);
-
-        // whether the height of the geometry intersects the tile
-        // bbox[2] is the min height, bbox[5] is the max height
-        // space.altMin and space.altMax are the min and max heights of the tile
+        // 高さ（Z軸）の交差判定
+        // bbox[2] が最小高度、bbox[5] が最大高度、space.altMin/altMax がタイルの高度範囲
         const heightIntersects = bbox[2] <= space.altMax && bbox[5] >= space.altMin;
         return geomIntersects && heightIntersects;
       });
@@ -189,15 +184,9 @@ export class LocalSpatialId {
     const scale = this.namespace.scale;
     const meters = tile2meters(scale, this.zfxy.z);
 
-    // The origin point is the center of the root tile
-    // const x0 = (this.zfxy.x * meters) - (scale / 2);
-    // const y0 = 0 - ((this.zfxy.y * meters) - (scale / 2)); // flip Y-axis: 0/0 is top-left
-    // const x1 = ((this.zfxy.x + 1) * meters) - (scale / 2);
-    // const y1 = 0 - (((this.zfxy.y + 1) * meters) - (scale / 2));
-
-    // The origin point is the top-left of the root tile
+    // タイルの左上を原点とした座標計算（Y軸は反転）
     const x0 = this.zfxy.x * meters;
-    const y0 = 0 - (this.zfxy.y * meters); // flip Y-axis: 0/0 is top-left
+    const y0 = 0 - (this.zfxy.y * meters);
     const x1 = (this.zfxy.x + 1) * meters;
     const y1 = 0 - ((this.zfxy.y + 1) * meters);
 
@@ -221,21 +210,20 @@ export class LocalSpatialId {
   toWGS84BBox(): BBox3D {
     const bbox = this.toWGS84BBox2D();
 
-    const scale = this.namespace.scale;
-    const meters = tile2meters(scale, this.zfxy.z);
-    const f0 = this.namespace.origin.altitude + (this.zfxy.f * meters);
-    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * meters);
+    // 修正ポイント: 高さ方向は scaleHeight を用いて変換する
+    const verticalMeters = tile2meters(this.namespace.scaleHeight, this.zfxy.z);
+    const f0 = this.namespace.origin.altitude + (this.zfxy.f * verticalMeters);
+    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * verticalMeters);
 
     return [
-      bbox[0], bbox[1], f0, //min
-      bbox[2], bbox[3], f1, //max
+      bbox[0], bbox[1], f0, // min: [west, south, bottom]
+      bbox[2], bbox[3], f1, // max: [east, north, top]
     ];
   }
 
   toWGS84BBox2D(): BBox2D {
     const globalGeoJSON = this.toGeoJSON();
     const bbox = turfBBox(globalGeoJSON);
-
     return [bbox[0], bbox[1], bbox[2], bbox[3]];
   }
 

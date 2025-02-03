@@ -11,7 +11,20 @@ describe('LocalSpatialId', () => {
     const namespace = new LocalNamespace({
       scale: 1
     });
+    // scaleHeight が指定されなかった場合、scale と同じ値になる
     assert.strictEqual(namespace.scale, 1);
+    assert.strictEqual(namespace.scaleHeight, 1);
+    const space = namespace.space('/0/0/0/0');
+    assert.strictEqual(space.zfxyStr, '/0/0/0/0');
+  });
+
+  test("Basic construction with custom scaleHeight", () => {
+    const namespace = new LocalNamespace({
+      scale: 1,
+      scaleHeight: 2
+    });
+    assert.strictEqual(namespace.scale, 1);
+    assert.strictEqual(namespace.scaleHeight, 2);
     const space = namespace.space('/0/0/0/0');
     assert.strictEqual(space.zfxyStr, '/0/0/0/0');
   });
@@ -22,7 +35,7 @@ describe('LocalSpatialId', () => {
     const bbox = space.toWGS84BBox();
 
     // a bounding box of 10km2, with the center at 東京都庁
-    const referenceBbox: BBox3D =  [ 139.64657, 35.63581115931438, 0, 139.7570982609969, 35.72599000000001, 10000 ];
+    const referenceBbox: BBox3D = [139.64657, 35.63581115931438, 0, 139.7570982609969, 35.72599000000001, 10000];
     assert.deepStrictEqual(bbox, referenceBbox);
   });
 
@@ -32,8 +45,27 @@ describe('LocalSpatialId', () => {
     const bbox = space.toWGS84BBox();
 
     // a bounding box of 10km2, with the center at 東京都庁
-    const referenceBbox: BBox3D =  [ 139.61377266711673, 35.61310942775181, 0, 139.76998733288326, 35.74057, 10000 ];
+    const referenceBbox: BBox3D = [139.61377266711673, 35.61310942775181, 0, 139.76998733288326, 35.74057, 10000];
     assert.deepStrictEqual(bbox, referenceBbox);
+  });
+
+  test("Conversion to WGS84 with custom scaleHeight", () => {
+    // 簡単なテストのため、回転なしの変換となるよう origin を設定
+    const namespace = new LocalNamespace({
+      scale: 100,
+      scaleHeight: 50,
+      origin_latitude: 0,
+      origin_longitude: 0,
+      origin_altitude: 10
+    });
+    // タイル '/0/0/0/0' は z = 0, f = 0 となるので、
+    // 水平は scale = 100（tile2meters(100,0)=100）ですが、ここでは主に垂直方向を検証するため、
+    // 垂直方向は tile2meters(scaleHeight, 0) = scaleHeight = 50 となる。
+    // よって、min altitude = origin_altitude + 0 * 50 = 10、max altitude = 10 + 50 = 60 となるはず
+    const space = namespace.space('/0/0/0/0');
+    const bbox = space.toWGS84BBox();
+    assert.strictEqual(bbox[2], 10, "Min altitude should equal origin altitude");
+    assert.strictEqual(bbox[5], 60, "Max altitude should equal origin altitude + scaleHeight");
   });
 
   test("toContainingGlobalSpatialId", () => {

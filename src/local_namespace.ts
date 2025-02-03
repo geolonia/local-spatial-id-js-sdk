@@ -11,14 +11,22 @@ export type LocalNamespaceOptions = {
   /// 存在しない場合は、ランダムなUUIDで生成されます。
   id?: string
 
-  /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
+  /// 水平方向のローカル空間全体の１軸の最大長さ（メートル）。
+  /// 例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m 程度の大きさとなります。
   scale: number
+
+  /**
+   * 高さ方向のローカル空間全体の最大長さ（メートル）。
+   * 指定しない場合は scale と同じ値が使用されます。
+   **/
+  scaleHeight?: number
 
   name?: string
   description?: string
 
   /**
-   * ローカル空間をグローバル空間とマッピングする場合、基準点をしていしなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
+   * ローカル空間をグローバル空間とマッピングする場合、基準点を指定しなければなりません。
+   * `altitude` または `angle` はデフォルトで `0` となります。
    * 設定する場合、最低でも `latitude` と `longitude` は必須です。
    * 基準点を設定する場合、基準点は空間の中央点として扱われます。
    **/
@@ -38,6 +46,7 @@ type OriginSettings = {
 export class LocalNamespace {
   id: string
   scale: number
+  scaleHeight: number
   name?: string
   description?: string
   origin?: OriginSettings
@@ -47,6 +56,7 @@ export class LocalNamespace {
   constructor(options: LocalNamespaceOptions) {
     this.id = options.id ?? crypto.randomUUID();
     this.scale = options.scale;
+    this.scaleHeight = options.scaleHeight ?? options.scale;
     this.name = options.name;
     this.description = options.description;
     if (options.origin_latitude && options.origin_longitude) {
@@ -72,12 +82,11 @@ export class LocalNamespace {
     if (!this.origin) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
-    // this is a little more complicated than calculating the bounding box.
-    // first, get the bounding local space of the input geometry, so we know the range of local spaces we need to cover.
+    // 入力ジオメトリを含むローカル空間の境界範囲を取得
     const boundingSpace = this.boundingSpaceFromGeoJSON(input);
-    // now, calculate the tiles at requested zoom level that cover the bounding space.
+    // 指定された zoom レベルで、boundingSpace を覆うタイル群を取得する
     const coveringSpaces = getChildrenAtZoom(zoom, boundingSpace.zfxy).map((tile) => new LocalSpatialId(this, tile));
-    // now, perform a intersects check on each of the covering spaces to see if they actually contain the input geometry.
+    // 各タイルが実際に入力ジオメトリと交差しているかチェックする
     return coveringSpaces.filter((space) => space.intersects(input));
   }
 
@@ -85,16 +94,17 @@ export class LocalNamespace {
     if (!this.georeferencer) {
       throw new ConversionNotPossibleError("The namespace this spatial ID is contained within does not have an origin set.");
     }
-    // Get the bounding box of the input geometry
+    // 入力ジオメトリのバウンディングボックスを取得
     const bbox = turfBBox(input);
 
-    // Convert the bounding box from WGS84 to the local space
+    // WGS84 のバウンディングボックスの座標をローカル空間に変換
     const nw = this.georeferencer.transformInverse({ x: bbox[0], y: bbox[1] });
     const se = this.georeferencer.transformInverse({ x: bbox[2], y: bbox[3] });
-    // Note that the Y axis is flipped
-    const localBBox3D: BBox3D = [nw.x, -nw.y, 0, se.x, -se.y, 0];
+    // Y 軸は符号を反転（NorthWest/SouthEast の関係による）
+    // 高さ方向は、ローカル空間全体の高さ scaleHeight を使用する
+    const localBBox3D: BBox3D = [nw.x, -nw.y, 0, se.x, -se.y, this.scaleHeight];
 
-    // Convert the bounding box to a local spatial ID
+    // 変換されたバウンディングボックスからローカル空間IDを生成
     return new LocalSpatialId(this, localBBox3D);
   }
 }
