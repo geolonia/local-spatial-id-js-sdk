@@ -12,6 +12,7 @@ MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group" as "mapboxg
 
 type NSParams = {
   scale: number;
+  scaleHeight: number;
   origin: string;
   originAltitude: number;
   originAngle: number;
@@ -58,6 +59,7 @@ function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
     scale: 150,
+    scaleHeight: 200,
     origin: "35.690128926025096,139.69097558834432",
     originAltitude: 0,
     originAngle: -11,
@@ -81,7 +83,6 @@ function App() {
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
   const [voxelHeight, setVoxelHeight] = useState(0);
-  const [voxelHeightManual, setVoxelHeightManual] = useState(0);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -247,13 +248,14 @@ function App() {
     }
 
     const rootSpace = namespace.space("/0/0/0/0");
+    console.log("rootSpace", rootSpace);
+    console.log(rootSpace.childrenAtZoom(localSpaceZoom));
     const childrenAtZoom = rootSpace
       .childrenAtZoom(localSpaceZoom)
       .filter(space => space.zfxy.f === interestedLocalF);
     const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => {
       const bbox = space.toWGS84BBox();
-      const maxAltitude = voxelHeightManual ? bbox[2] + voxelHeightManual : bbox[5];
-      setVoxelHeight(maxAltitude - bbox[2]);
+      setVoxelHeight(bbox[5] - bbox[2]);
 
       return {
         "id": hashCode(space.zfxyStr),
@@ -264,12 +266,11 @@ function App() {
           "zoom": localSpaceZoom,
           "zfxy": space.zfxyStr,
           "min_altitude": bbox[2],
-          "max_altitude": maxAltitude,
+          "max_altitude": bbox[5],
         },
         "geometry": space.toGeoJSON(),
       };
     });
-    console.log(features);
     const src = map.getSource("local-namespace") as maplibregl.GeoJSONSource;
     src.updateData({
       add: features,
@@ -361,7 +362,7 @@ function App() {
         remove: childrenAtZoom.map(space => hashCode(space.zfxyStr)),
       });
     };
-  }, [map, namespace, localSpaceZoom, interestedLocalF, voxelHeight, voxelHeightManual]);
+  }, [map, namespace, localSpaceZoom, interestedLocalF, voxelHeight]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
     map.setMaxPitch(80);
@@ -510,6 +511,7 @@ function App() {
             toSelect.add(featureId);
 
             const bbox = localId.toWGS84BBox();
+            setVoxelHeight(bbox[5] - bbox[2]);
 
             // TODO: this needs to be updated to pull from the one true source of truth
             // right now, this is just being set to show selected cells on the sidebar,
@@ -526,7 +528,7 @@ function App() {
                 "zoom": localSpaceZoom,
                 "zfxy": localId.zfxyStr,
                 "min_altitude": bbox[2],
-                "max_altitude": voxelHeightManual ? bbox[2] + voxelHeightManual : bbox[5],
+                "max_altitude": bbox[5],
               },
             });
             console.log(`${zfxy} => ${localId.zfxyStr}`);
@@ -607,7 +609,7 @@ function App() {
       });
       setClickedFeatures([]);
     };
-  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight, voxelHeightManual]);
+  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight]);
 
   return (
     <div id="App">
@@ -675,12 +677,21 @@ function App() {
                 °
               </label>
               <label>
-                <span>全体範囲（X,Y; 水平）</span>
+                <span>全体範囲（水平）</span>
                 <input
                   type="text"
                   name="scale"
                   value={namespaceParams.scale}
                   onChange={ev => setNamespaceParams(prev => ({ ...prev, scale: Number(ev.target.value) }))}
+                />
+              </label>
+              <label>
+                <span>全体範囲（高さ）</span>
+                <input
+                  type="text"
+                  name="height"
+                  value={namespaceParams.scaleHeight}
+                  onChange={ev => setNamespaceParams(prev => ({ ...prev, scaleHeight: Number(ev.target.value) }))}
                 />
               </label>
             </form>
@@ -722,21 +733,20 @@ function App() {
                 type="number"
                 name="interestedLocalF"
                 min={0}
-                max={Math.pow(2, localSpaceZoom) - 1}
+                // max={Math.pow(2, localSpaceZoom) - 1}
+                max={
+                  voxelHeight
+                    ? Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1
+                    : Math.pow(2, localSpaceZoom) - 1
+                }
                 value={interestedLocalF}
                 onChange={ev => setInterestedLocalF(Number(ev.target.value))}
               />
             </label>
             <div>
               <label>
-                <span>ボクセルの高さ（m）</span>
-                <input
-                  type="number"
-                  name="voxelHeight"
-                  min={0}
-                  value={voxelHeightManual || voxelHeight}
-                  onChange={ev => setVoxelHeightManual(Number(ev.target.value))}
-                />
+                <span>ボクセルの高さ: </span>
+                <span>{`${voxelHeight}m`}</span>
               </label>
             </div>
             <hr />
