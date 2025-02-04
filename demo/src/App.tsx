@@ -59,7 +59,7 @@ function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
     scale: 150,
-    scaleHeight: 200,
+    scaleHeight: 300,
     origin: "35.690128926025096,139.69097558834432",
     originAltitude: 0,
     originAngle: -11,
@@ -83,6 +83,8 @@ function App() {
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
   const [voxelHeight, setVoxelHeight] = useState(0);
+  const [voxelMinAltitude, setVoxelMinAltitude] = useState(0);
+  const [voxelMaxAltitude, setVoxelMaxAltitude] = useState(0);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -247,15 +249,35 @@ function App() {
       return;
     }
 
+    let interestedLocalFInRange;
+    // 全体範囲の高さが全体範囲の水平よりも大きい場合
+    if (namespaceParams.scaleHeight > namespaceParams.scale) {
+      // 正方形の切り方で指定できる最大のF値より、任意の高さのボクセルの高さが大きい場合は、現状の local spacial ID SDK では、
+      // そのボクセルの高さを超えるF値は指定できないので、正方形の最大の高さを使って拡張する。
+      if (Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1 > Math.pow(2, localSpaceZoom) - 1) {
+        interestedLocalFInRange = Math.pow(2, localSpaceZoom) - 1;
+      } else {
+        interestedLocalFInRange = Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1;
+      }
+    } else {
+      interestedLocalFInRange = Math.pow(2, localSpaceZoom) - 1;
+    }
+
     const rootSpace = namespace.space("/0/0/0/0");
-    console.log("rootSpace", rootSpace);
-    console.log(rootSpace.childrenAtZoom(localSpaceZoom));
     const childrenAtZoom = rootSpace
       .childrenAtZoom(localSpaceZoom)
-      .filter(space => space.zfxy.f === interestedLocalF);
+      .filter(space => space.zfxy.f === interestedLocalFInRange);
+
     const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => {
       const bbox = space.toWGS84BBox();
-      setVoxelHeight(bbox[5] - bbox[2]);
+      const _voxelHeight = bbox[5] - bbox[2];
+      setVoxelHeight(_voxelHeight);
+      // min_altitude は f値 x voxelHeight
+      // max_altitude は f値 x voxelHeight + voxelHeight
+      const min_altitude = interestedLocalF * _voxelHeight;
+      const max_altitude = (interestedLocalF * _voxelHeight) + _voxelHeight;
+      setVoxelMinAltitude(min_altitude);
+      setVoxelMaxAltitude(max_altitude);
 
       return {
         "id": hashCode(space.zfxyStr),
@@ -265,8 +287,8 @@ function App() {
           "_lbl": "on",
           "zoom": localSpaceZoom,
           "zfxy": space.zfxyStr,
-          "min_altitude": bbox[2],
-          "max_altitude": bbox[5],
+          "min_altitude": min_altitude,
+          "max_altitude": max_altitude,
         },
         "geometry": space.toGeoJSON(),
       };
@@ -362,7 +384,7 @@ function App() {
         remove: childrenAtZoom.map(space => hashCode(space.zfxyStr)),
       });
     };
-  }, [map, namespace, localSpaceZoom, interestedLocalF, voxelHeight]);
+  }, [map, namespace, localSpaceZoom, interestedLocalF, namespaceParams.scaleHeight, namespaceParams.scale, voxelHeight]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
     map.setMaxPitch(80);
@@ -449,7 +471,6 @@ function App() {
         ));
       const featuresById = new Map(filteredFeatures.map(feature => [feature.id as number, feature]));
       const features = Array.from(featuresById.values());
-      console.log(features);
 
       const clickedIds = Array.from(featuresById.keys());
       selectedIds = clickedIds;
@@ -682,7 +703,12 @@ function App() {
                   type="text"
                   name="scale"
                   value={namespaceParams.scale}
-                  onChange={ev => setNamespaceParams(prev => ({ ...prev, scale: Number(ev.target.value) }))}
+                  onChange={(ev) => {
+                    // 全体範囲を変えた時は、F値と ローカルズームをリセット
+                    setInterestedLocalF(0);
+                    setLocalSpaceZoom(3);
+                    setNamespaceParams(prev => ({ ...prev, scale: Number(ev.target.value) }));
+                  }}
                 />
               </label>
               <label>
@@ -691,7 +717,12 @@ function App() {
                   type="text"
                   name="height"
                   value={namespaceParams.scaleHeight}
-                  onChange={ev => setNamespaceParams(prev => ({ ...prev, scaleHeight: Number(ev.target.value) }))}
+                  onChange={(ev) => {
+                    // 全体範囲を変えた時は、F値と ローカルズームをリセット
+                    setInterestedLocalF(0);
+                    setLocalSpaceZoom(3);
+                    setNamespaceParams(prev => ({ ...prev, scaleHeight: Number(ev.target.value) }));
+                  }}
                 />
               </label>
             </form>
@@ -718,11 +749,19 @@ function App() {
                 <input
                   type="range"
                   name="internal-zoom"
-                  min={0}
                   max={6}
                   step={1}
                   value={localSpaceZoom}
-                  onChange={ev => setLocalSpaceZoom(Number(ev.target.value))}
+                  onChange={(ev) => {
+                    const nextZoom = Number(ev.target.value);
+                    // nextZoomで計算した時に 現在のf値 + 1 * ボクセルの高さ が全体範囲の高さを超える場合は、ズームレベルを変更しない
+                    const _voxelHeight = namespaceParams.scale / Math.pow(2, nextZoom);
+                    if ((interestedLocalF + 1) * _voxelHeight > namespaceParams.scaleHeight) {
+                      return;
+                    } else {
+                      setLocalSpaceZoom(nextZoom);
+                    }
+                  }}
                 />
                 {localSpaceZoom}
               </label>
@@ -733,7 +772,6 @@ function App() {
                 type="number"
                 name="interestedLocalF"
                 min={0}
-                // max={Math.pow(2, localSpaceZoom) - 1}
                 max={
                   voxelHeight
                     ? Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1
@@ -743,11 +781,19 @@ function App() {
                 onChange={ev => setInterestedLocalF(Number(ev.target.value))}
               />
             </label>
-            <div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
               <label>
                 <span>ボクセルの高さ: </span>
                 <span>{`${voxelHeight}m`}</span>
               </label>
+              {/* <label>
+                <span>ボクセルの底面の高さ: </span>
+                <span>{`${voxelMinAltitude}m`}</span>
+              </label>
+              <label>
+                <span>ボクセル天面の高さ: </span>
+                <span>{`${voxelMaxAltitude}m`}</span>
+              </label> */}
             </div>
             <hr />
             <h3>グローバルズームレベル（Z）</h3>
