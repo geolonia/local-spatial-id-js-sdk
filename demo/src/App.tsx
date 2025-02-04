@@ -3,7 +3,7 @@ import { GeoloniaMap } from "@geolonia/embed-react";
 import "./App.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import * as LSID from "@geolonia/local-spatial-id-js-sdk";
+import * as LSID from "./local-spatial-id-js-sdk";
 import { hashCode } from "./tools";
 
 MapboxDraw.constants.classes.CONTROL_BASE = "maplibregl-ctrl" as "mapboxgl-ctrl";
@@ -12,6 +12,7 @@ MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group" as "mapboxg
 
 type NSParams = {
   scale: number;
+  scale_height: number;
   origin: string;
   originAltitude: number;
   originAngle: number;
@@ -58,6 +59,7 @@ function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
     scale: 150,
+    scale_height: 300,
     origin: "35.690128926025096,139.69097558834432",
     originAltitude: 0,
     originAngle: -11,
@@ -67,6 +69,7 @@ function App() {
     const [latitude, longitude] = namespaceParams.origin.split(",").map(Number);
     return new LSID.LocalNamespace({
       scale: namespaceParams.scale,
+      scale_height: namespaceParams.scale_height,
       origin_latitude: latitude,
       origin_longitude: longitude,
       origin_altitude: namespaceParams.originAltitude,
@@ -81,7 +84,6 @@ function App() {
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
   const [voxelHeight, setVoxelHeight] = useState(0);
-  const [voxelHeightManual, setVoxelHeightManual] = useState(0);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -252,8 +254,7 @@ function App() {
       .filter(space => space.zfxy.f === interestedLocalF);
     const features: GeoJSON.Feature[] = childrenAtZoom.map((space) => {
       const bbox = space.toWGS84BBox();
-      const maxAltitude = voxelHeightManual ? bbox[2] + voxelHeightManual : bbox[5];
-      setVoxelHeight(maxAltitude - bbox[2]);
+      setVoxelHeight(bbox[5] - bbox[2]);
 
       return {
         "id": hashCode(space.zfxyStr),
@@ -264,7 +265,7 @@ function App() {
           "zoom": localSpaceZoom,
           "zfxy": space.zfxyStr,
           "min_altitude": bbox[2],
-          "max_altitude": maxAltitude,
+          "max_altitude": bbox[5],
         },
         "geometry": space.toGeoJSON(),
       };
@@ -361,7 +362,7 @@ function App() {
         remove: childrenAtZoom.map(space => hashCode(space.zfxyStr)),
       });
     };
-  }, [map, namespace, localSpaceZoom, interestedLocalF, voxelHeight, voxelHeightManual]);
+  }, [map, namespace, localSpaceZoom, interestedLocalF, voxelHeight]);
 
   const mapLoaded = useCallback((map: maplibregl.Map) => {
     map.setMaxPitch(80);
@@ -526,7 +527,7 @@ function App() {
                 "zoom": localSpaceZoom,
                 "zfxy": localId.zfxyStr,
                 "min_altitude": bbox[2],
-                "max_altitude": voxelHeightManual ? bbox[2] + voxelHeightManual : bbox[5],
+                "max_altitude": bbox[5],
               },
             });
             console.log(`${zfxy} => ${localId.zfxyStr}`);
@@ -607,7 +608,7 @@ function App() {
       });
       setClickedFeatures([]);
     };
-  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight, voxelHeightManual]);
+  }, [map, namespace, globalSpaceZoom, currentMode, localSpaceZoom, interestedLocalF, voxelHeight]);
 
   return (
     <div id="App">
@@ -675,12 +676,21 @@ function App() {
                 °
               </label>
               <label>
-                <span>全体範囲（X,Y; 水平）</span>
+                <span>全体範囲（水平）</span>
                 <input
                   type="text"
                   name="scale"
                   value={namespaceParams.scale}
                   onChange={ev => setNamespaceParams(prev => ({ ...prev, scale: Number(ev.target.value) }))}
+                />
+              </label>
+              <label>
+                <span>全体範囲（高さ）</span>
+                <input
+                  type="text"
+                  name="scale_height"
+                  value={namespaceParams.scale_height}
+                  onChange={ev => setNamespaceParams(prev => ({ ...prev, scale_height: Number(ev.target.value) }))}
                 />
               </label>
             </form>
@@ -727,16 +737,27 @@ function App() {
                 onChange={ev => setInterestedLocalF(Number(ev.target.value))}
               />
             </label>
+            <hr />
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label>
+                <span>ボクセルの高さ: </span>
+                <span>{`${namespaceParams.scale_height.toLocaleString("ja-JP")}m`}</span>
+              </label>
+              <label>
+                <span>ボクセルの辺: </span>
+                <span>{`${namespaceParams.scale.toLocaleString("ja-JP")}m`}</span>
+              </label>
+            </div>
             <div>
               <label>
-                <span>ボクセルの高さ（m）</span>
-                <input
-                  type="number"
-                  name="voxelHeight"
-                  min={0}
-                  value={voxelHeightManual || voxelHeight}
-                  onChange={ev => setVoxelHeightManual(Number(ev.target.value))}
-                />
+                <span>ボクセルの1辺の面積: </span>
+                <span>{`${(namespaceParams.scale * namespaceParams.scale).toLocaleString("ja-JP")}m²`}</span>
+              </label>
+            </div>
+            <div>
+              <label>
+                <span>ボクセルの体積: </span>
+                <span>{`${(namespaceParams.scale * namespaceParams.scale * namespaceParams.scale_height).toLocaleString("ja-JP")}m³`}</span>
               </label>
             </div>
             <hr />

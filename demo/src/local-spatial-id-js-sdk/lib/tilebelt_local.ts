@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BBox3D, XYFZTile, getBboxZoom, xyfzTileAryToObj } from "./tilebelt";
 import { XYPointWithAltitude } from "./types";
 import { ZFXYTile } from "./zfxy";

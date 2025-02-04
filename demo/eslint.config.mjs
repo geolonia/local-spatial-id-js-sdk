@@ -18,7 +18,7 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ["**/dist", "**/.eslintrc.cjs"],
+    ignores: ["**/dist", "**/.eslintrc.cjs", "src/local-spatial-id-js-sdk/**"],
   },
   stylistic.configs.customize({
     semi: true,

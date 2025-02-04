@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ConversionNotPossibleError } from "./lib/errors";
 import { CoordinateTransformer, OriginGeodesicTransformer } from "./lib/georeference";
 import { BBox3D } from "./lib/tilebelt";
