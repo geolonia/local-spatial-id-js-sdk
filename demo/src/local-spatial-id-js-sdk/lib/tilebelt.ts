@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ZFXY_1M_ZOOM_BASE, ZFXYTile as ZFXYTileObj } from "./zfxy";
 
 /// x, y, z

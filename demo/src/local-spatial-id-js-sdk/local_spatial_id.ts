@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { LocalNamespace } from "./local_namespace";
 
 import * as SpatialId from "@spatial-id/javascript-sdk";

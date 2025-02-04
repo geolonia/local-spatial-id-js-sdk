@@ -1,3 +1,4 @@
+// @ts-nocheck
 import geodesic from 'geographiclib-geodesic';
 
 export type Point = { x: number, y: number }

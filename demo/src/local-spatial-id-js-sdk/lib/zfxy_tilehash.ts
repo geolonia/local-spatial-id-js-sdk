@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ZFXYTile, getChildren, getParent } from "./zfxy";
 
 export function parseZFXYTilehash(th: string): ZFXYTile {
