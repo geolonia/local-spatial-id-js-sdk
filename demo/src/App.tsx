@@ -83,8 +83,6 @@ function App() {
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
   const [voxelHeight, setVoxelHeight] = useState(0);
-  const [voxelMinAltitude, setVoxelMinAltitude] = useState(0);
-  const [voxelMaxAltitude, setVoxelMaxAltitude] = useState(0);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -276,8 +274,6 @@ function App() {
       // max_altitude は f値 x voxelHeight + voxelHeight
       const min_altitude = interestedLocalF * _voxelHeight;
       const max_altitude = (interestedLocalF * _voxelHeight) + _voxelHeight;
-      setVoxelMinAltitude(min_altitude);
-      setVoxelMaxAltitude(max_altitude);
 
       return {
         "id": hashCode(space.zfxyStr),
@@ -495,6 +491,7 @@ function App() {
           const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
           console.timeEnd("toGlobalSpatialIds");
           for (const globalId of globalIds) {
+            console.log(globalId);
             const featureId = hashCode(`global-${globalId.tilehash}`);
             temporaryIds.push(featureId);
             geojsons.push({
@@ -532,7 +529,12 @@ function App() {
             toSelect.add(featureId);
 
             const bbox = localId.toWGS84BBox();
-            setVoxelHeight(bbox[5] - bbox[2]);
+            const _voxelHeight = bbox[5] - bbox[2];
+            setVoxelHeight(_voxelHeight);
+            // min_altitude は f値 x voxelHeight
+            // max_altitude は f値 x voxelHeight + voxelHeight
+            const min_altitude = interestedLocalF * _voxelHeight;
+            const max_altitude = (interestedLocalF * _voxelHeight) + _voxelHeight;
 
             // TODO: this needs to be updated to pull from the one true source of truth
             // right now, this is just being set to show selected cells on the sidebar,
@@ -548,8 +550,8 @@ function App() {
                 "_lbl": "off",
                 "zoom": localSpaceZoom,
                 "zfxy": localId.zfxyStr,
-                "min_altitude": bbox[2],
-                "max_altitude": bbox[5],
+                "min_altitude": min_altitude,
+                "max_altitude": max_altitude,
               },
             });
             console.log(`${zfxy} => ${localId.zfxyStr}`);
