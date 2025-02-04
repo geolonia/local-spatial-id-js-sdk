@@ -18,6 +18,20 @@ type NSParams = {
   originAngle: number;
 };
 
+/**
+ * ボクセルの水平方向の辺と高さを計算する関数
+ * @param {number} L - 全体範囲の水平一辺の長さ [m]
+ * @param {number} H - 全体範囲の鉛直方向の高さ [m]
+ * @param {number} z - ズームレベル
+ * @returns {Object} horizontalEdge と verticalEdge を含むオブジェクト
+ */
+function computeVoxelDimensions(L: number, H: number, z: number) {
+  const n = Math.pow(2, z); // n = 2^z
+  const horizontalEdge = L / n;
+  const verticalEdge = H / n;
+  return { horizontalEdge, verticalEdge };
+}
+
 function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
   // const filteredFeatures = features
   //   .map((feature) => {
@@ -84,6 +98,7 @@ function App() {
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
   const [voxelHeight, setVoxelHeight] = useState(0);
+  const voxelDimensions = useMemo(() => computeVoxelDimensions(namespaceParams.scale, namespaceParams.scale_height, localSpaceZoom), [namespaceParams.scale, namespaceParams.scale_height, localSpaceZoom]);
 
   useLayoutEffect(() => {
     if (!map) return;
@@ -741,23 +756,23 @@ function App() {
             <div style={{ display: "flex", flexDirection: "column" }}>
               <label>
                 <span>ボクセルの高さ: </span>
-                <span>{`${namespaceParams.scale_height.toLocaleString("ja-JP")}m`}</span>
+                <span>{`${voxelDimensions.verticalEdge.toLocaleString("ja-JP")}m`}</span>
               </label>
               <label>
-                <span>ボクセルの辺: </span>
-                <span>{`${namespaceParams.scale.toLocaleString("ja-JP")}m`}</span>
+                <span>ボクセルの水平方向の辺: </span>
+                <span>{`${voxelDimensions.horizontalEdge.toLocaleString("ja-JP")}m`}</span>
               </label>
             </div>
             <div>
               <label>
-                <span>ボクセルの1辺の面積: </span>
-                <span>{`${(namespaceParams.scale * namespaceParams.scale).toLocaleString("ja-JP")}m²`}</span>
+                <span>ボクセルの水平方向の面積: </span>
+                <span>{`${(voxelDimensions.horizontalEdge * voxelDimensions.horizontalEdge).toLocaleString("ja-JP")}m²`}</span>
               </label>
             </div>
             <div>
               <label>
                 <span>ボクセルの体積: </span>
-                <span>{`${(namespaceParams.scale * namespaceParams.scale * namespaceParams.scale_height).toLocaleString("ja-JP")}m³`}</span>
+                <span>{`${(voxelDimensions.horizontalEdge * voxelDimensions.horizontalEdge * voxelDimensions.verticalEdge).toLocaleString("ja-JP")}m³`}</span>
               </label>
             </div>
             <hr />
