@@ -58,8 +58,8 @@ function RenderClickedFeatures({ features }: { features: GeoJSON.Feature[] }) {
 function App() {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
   const [namespaceParams, setNamespaceParams] = useState<NSParams>({
-    scale: 150,
-    scaleHeight: 300,
+    scale: 100,
+    scaleHeight: 200,
     origin: "35.690128926025096,139.69097558834432",
     originAltitude: 0,
     originAngle: -11,
@@ -82,6 +82,7 @@ function App() {
   const [localSpaceZoom, setLocalSpaceZoom] = useState(3);
   const [globalSpaceZoom, setGlobalSpaceZoom] = useState(21);
   const [interestedLocalF, setInterestedLocalF] = useState(0);
+  // const [interestedLocalFInRange, setInterestedLocalFInRange] = useState(0);
   const [voxelHeight, setVoxelHeight] = useState(0);
 
   useLayoutEffect(() => {
@@ -247,18 +248,20 @@ function App() {
       return;
     }
 
-    let interestedLocalFInRange;
-    // 全体範囲の高さが全体範囲の水平よりも大きい場合
+    // 水平範囲を基準にして立方体を作った時の高さより、scaleHeightが大きいと sdk でデータが取得できないので、（f値 + 1）* _voxelHeightが、立方体の高さを超えたら、
+    // voxelを取得する時の f値は 治るようにする。altitudeの設定は interestedLocalFInRange を使う。
+    let interestedLocalFInRange = interestedLocalF;
+    const scaleInterestedLocalFMax = Math.pow(2, localSpaceZoom) - 1;
+    const scaleHeightInterestedLocalFMax = Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1;
+
     if (namespaceParams.scaleHeight > namespaceParams.scale) {
-      // 正方形の切り方で指定できる最大のF値より、任意の高さのボクセルの高さが大きい場合は、現状の local spacial ID SDK では、
-      // そのボクセルの高さを超えるF値は指定できないので、正方形の最大の高さを使って拡張する。
-      if (Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1 > Math.pow(2, localSpaceZoom) - 1) {
-        interestedLocalFInRange = Math.pow(2, localSpaceZoom) - 1;
-      } else {
-        interestedLocalFInRange = Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1;
+      if (interestedLocalF > scaleInterestedLocalFMax) {
+        interestedLocalFInRange = scaleInterestedLocalFMax;
       }
-    } else {
-      interestedLocalFInRange = Math.pow(2, localSpaceZoom) - 1;
+    } else if (namespace.scale > namespaceParams.scaleHeight) {
+      if (interestedLocalF > scaleHeightInterestedLocalFMax) {
+        interestedLocalFInRange = scaleHeightInterestedLocalFMax;
+      }
     }
 
     const rootSpace = namespace.space("/0/0/0/0");
@@ -283,6 +286,8 @@ function App() {
           "_lbl": "on",
           "zoom": localSpaceZoom,
           "zfxy": space.zfxyStr,
+          // "min_altitude": bbox[2],
+          // "max_altitude": bbox[5],
           "min_altitude": min_altitude,
           "max_altitude": max_altitude,
         },
@@ -489,11 +494,45 @@ function App() {
           // const globalId = space.toContainingGlobalSpatialId({ignoreF: true, maxzoom: 25});
           console.time("toGlobalSpatialIds");
           const globalIds = space.toGlobalSpatialIds(globalSpaceZoom);
+          console.log(globalIds);
           console.timeEnd("toGlobalSpatialIds");
           for (const globalId of globalIds) {
             console.log(globalId);
             const featureId = hashCode(`global-${globalId.tilehash}`);
             temporaryIds.push(featureId);
+
+            const globalVoxelHeight = globalId.altMax - globalId.altMin;
+
+            const scaleInterestedLocalFMax = Math.pow(2, localSpaceZoom) - 1;
+            const scaleHeightInterestedLocalFMax = Math.floor(namespaceParams.scaleHeight / voxelHeight) - 1;
+
+            // let fMax;
+            // if (namespaceParams.scaleHeight > namespaceParams.scale) {
+            //   fMax = scaleHeightInterestedLocalFMax;
+            // } else if (namespace.scale > namespaceParams.scaleHeight) {
+            //   fMax = scaleInterestedLocalFMax;
+            // }
+
+            // もし interestedLocalF が scaleInterestedLocalFMax より大きい場合は、
+
+            // min_altitude は f値 * globalVoxelHeight
+            // max_altitude は f値  * globalVoxelHeight + globalVoxelHeight
+
+            let globalMinAltitude = globalId.altMin;
+            let globalMaxAltitude = globalId.altMax;
+
+            if (interestedLocalF > scaleInterestedLocalFMax) {
+              const diffInterestedLocalF = interestedLocalF - scaleInterestedLocalFMax;
+              globalMinAltitude = globalId.altMin + (diffInterestedLocalF * globalVoxelHeight);
+              globalMaxAltitude = globalId.altMax + ((diffInterestedLocalF * globalVoxelHeight) + globalVoxelHeight);
+            }
+
+            console.log("altitudeMin", globalId.altMin);
+            console.log("altitudeMax", globalId.altMax);
+            console.log("globalVoxelHeight", globalVoxelHeight);
+            console.log("globalMinAltitude", globalMinAltitude);
+            console.log("globalMaxAltitude", globalMaxAltitude);
+
             geojsons.push({
               "type": "Feature",
               "id": featureId,
@@ -503,8 +542,8 @@ function App() {
                 "_lbl": "off",
                 "_selected": "on",
                 "zfxy": globalId.zfxyStr,
-                "min_altitude": globalId.altMin,
-                "max_altitude": globalId.altMax,
+                "min_altitude": globalMinAltitude,
+                "max_altitude": globalMaxAltitude,
               },
             });
             console.log(`${zfxy} => ${globalId.zfxyStr}`);
@@ -550,8 +589,8 @@ function App() {
                 "_lbl": "off",
                 "zoom": localSpaceZoom,
                 "zfxy": localId.zfxyStr,
-                "min_altitude": min_altitude,
-                "max_altitude": max_altitude,
+                "min_altitude": bbox[2],
+                "max_altitude": bbox[5],
               },
             });
             console.log(`${zfxy} => ${localId.zfxyStr}`);
