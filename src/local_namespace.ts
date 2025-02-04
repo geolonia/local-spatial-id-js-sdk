@@ -14,6 +14,9 @@ export type LocalNamespaceOptions = {
   /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
   scale: number
 
+  // ローカル空間全体の高さメートルで指定。
+  scale_height?: number
+
   name?: string
   description?: string
 
@@ -38,6 +41,7 @@ type OriginSettings = {
 export class LocalNamespace {
   id: string
   scale: number
+  scale_height?: number
   name?: string
   description?: string
   origin?: OriginSettings
@@ -49,6 +53,7 @@ export class LocalNamespace {
     this.scale = options.scale;
     this.name = options.name;
     this.description = options.description;
+    this.scale_height = options.scale_height ?? options.scale;
     if (options.origin_latitude && options.origin_longitude) {
       this.origin = {
         latitude: options.origin_latitude,

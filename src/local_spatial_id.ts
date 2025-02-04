@@ -50,6 +50,7 @@ export class LocalSpatialId {
     } else {
       this.zfxy = calculateLocalZFXY(
         this.namespace.scale,
+        this.namespace.scale_height,
         input,
         (typeof zoom !== 'undefined') ? zoom : DEFAULT_ZOOM,
         true, // clamp to valid coordinates
@@ -221,10 +222,11 @@ export class LocalSpatialId {
   toWGS84BBox(): BBox3D {
     const bbox = this.toWGS84BBox2D();
 
-    const scale = this.namespace.scale;
-    const meters = tile2meters(scale, this.zfxy.z);
-    const f0 = this.namespace.origin.altitude + (this.zfxy.f * meters);
-    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * meters);
+    const scale_height = this.namespace.scale_height;
+    const verticalMeters = tile2meters(scale_height, this.zfxy.z);
+
+    const f0 = this.namespace.origin.altitude + (this.zfxy.f * verticalMeters);
+    const f1 = this.namespace.origin.altitude + ((this.zfxy.f + 1) * verticalMeters);
 
     return [
       bbox[0], bbox[1], f0, //min
