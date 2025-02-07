@@ -1,172 +1,227 @@
-# 3D 空間 ID 共通ライブラリ (ローカル空間ID用)
+# fxyz DOM ライク API ドキュメント (拡張版)
 
-注意：このライブラリはまだ設計段階です。それぞれのクラス名・メソッド名は変わる可能性があるのでご注意ください。
+このドキュメントは、3D 空間を DOM（Document Object Model）ライクに扱うための fxyz ライブラリの仕様書です。  
+従来の DOM 操作に慣れた開発者が直感的に 3D 空間を扱えるよう、空間そのものを「ドキュメント」として、各空間単位を「エレメント」として操作できるインターフェースを目指しています。  
+なお、仕様はまだ設計段階にあり、クラス名やメソッド名は今後変更される可能性があります。
 
-## このライブラリの内容
+---
 
-* `LocalNamespace` - ローカル空間を管理します。
-* `LocalSpatialId` - ローカル空間内の空間を指すためのローカル空間IDを管理します。
+## 1. 空間ドキュメント: `LocalSpace`
 
-## `LocalNamespace`
+`LocalSpace` は、3D 空間全体を表す「ドキュメント」として機能します。  
+HTML の `document` オブジェクトのように、`LocalSpace` インスタンスを起点として、その内部に配置される空間エレメント（`LocalSpatialId`）を生成・操作します。
 
-### コンストラクタ
+### 1.1 コンストラクタ
 
-```
-new LocalNamespace( options: LocalNamespaceOptions )
-```
+```js
+new LocalSpace(options: LocalSpaceOptions)
+説明:
+新たな空間ドキュメントを生成します。
+このオブジェクトを通じて、新規空間エレメントの作成や既存エレメントへの操作を行います。
 
-ローカル空間をインスタンス化します。新しい空間を作るときや、既存の空間に対して処理を行うときに使います。このローカル空間では、XYZ座標を使います。ぞれぞれの軸の定義は下記となります:
+座標系について:
+この空間ドキュメントでは、以下の XYZ 座標系を採用しています:
 
-* `x` は右左
-* `y` は前奥
-* `z` は上下
+x 軸: 右 ↔ 左
+y 軸: 前 ↔ 奥
+z 軸: 上 ↔ 下
+1.1.1 LocalSpaceOptions インターフェース
+ts
+コピーする
+interface LocalSpaceOptions {
+  /**  
+   * 任意の一意な文字列。  
+   * ドキュメント全体の識別子として機能します。  
+   */
+  id?: string;
 
-```
-interface LocalNamespaceOptions {
-  /// 任意な一意な文字列。他のローカル空間と識別するために使います。
-  id?: string
+  /**  
+   * 空間ドキュメント全体の 1 軸あたりの最大長（単位: メートル）。  
+   * 例: 1 と指定すると、最大 1m × 1m × 1m の領域を表現します。  
+   */
+  scale: number;
 
-  /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
-  scale: number
+  /**  
+   * 空間ドキュメント全体の高さ（単位: メートル）。  
+   * 指定がない場合は `scale` の値が使われます。  
+   */
+  scale_height?: number;
 
-  /// ローカル空間全体の高さ。メートルで指定。指定がなければ、 `scale` と同じ値が使われます。
-  scale_height?: number
+  name?: string;
+  description?: string;
 
-  name?: string
-  description?: string
-
-  /// ローカル空間をグローバル空間とマッピングする場合、基準点をしていしなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
-  origin_latitude?: number
-  origin_longitude?: number
-  origin_altitude?: number
-  origin_angle?: number
+  /**  
+   * グローバル空間とのマッピングを行う場合の基準点設定。  
+   * `origin_latitude`、`origin_longitude`、`origin_altitude`、および `origin_angle` は、  
+   * 指定がない場合、`0` がデフォルト値となります。  
+   */
+  origin_latitude?: number;
+  origin_longitude?: number;
+  origin_altitude?: number;
+  origin_angle?: number;
 }
-```
+1.2 空間エレメントの生成・取得
+DOM の createElement や querySelector に類似して、LocalSpace では空間内の各エレメント（局所空間 ID）を操作するためのメソッドを提供しています。
 
-### メソッド
+1.2.1 space(input) → LocalSpatialId
+機能:
+指定した座標または空間 ID をもとに、空間エレメント（LocalSpatialId）を生成または取得します。
 
-`LocalNamespace` をインスタンス化されたあとで、その空間内のローカル空間IDを操作することができます。
+入力フォーマット:
 
-##### `.space(input)` -> `LocalSpatialId`
+XYZObject: 3 次元座標オブジェクト（例: { x: number, y: number, z: number }、単位はメートル）
+ZFXYTile: ZFXY（3 次元タイル番号）を表す文字列（例: "/15/6/2844/17952"）
+TileHash: ZFXY をハッシュ化した値（例: "100213200122640"）
+注意:
+XYZObject で指定された座標が空間ドキュメントの範囲外の場合、例外が発生します。
 
-`input` 座標及び高度または空間 ID を以下のフォーマットで指定することができます。
+1.2.2 spacesFromGeoJSON(zoom: number, input: GeoJSON.Geometry) → LocalSpatialId[]
+機能:
+指定した GeoJSON ジオメトリを元に、該当するズームレベルで内包される空間エレメントの配列を取得します。
 
-* XYZObject: XYZ座標を含むオブジェクト。単位はメートル。 （例: `{ x: number, y: number, z: number }`）
-* ZFXYTile: ZFXY（3次元タイル番号）を示す文字列。（例: `/15/6/2844/17952`）
-* TileHash: ZFXY をハッシュ化した値。（例: `100213200122640`）
+注意:
+基準点（origin）の設定が行われていない場合、例外が発生します。
 
-`XYZObject` で指定された座標がローカル空間により外の場合、例外が発生します。
+1.2.3 boundingSpaceFromGeoJSON(input: GeoJSON.Geometry) → LocalSpatialId
+機能:
+指定した GeoJSON ジオメトリ全体を内包する最小の空間エレメントを算出し、返します。
+
+注意:
+基準点の設定が未設定の場合、例外が発生します。
+
+1.3 DOM ライクな拡張メソッド
+従来の空間操作 API に加え、DOM の getElementById および querySelectorAll と同様の感覚で利用できるメソッドを実装します。
+これにより、既存の DOM 操作の知識を活かして空間内のエレメント検索が可能になります。
+
+1.3.1 getElementById(id: string): LocalSpatialId | null
+説明:
+空間ドキュメント内で、指定した一意の ID（通常は ZFXY のハッシュ値などを想定）を持つ空間エレメントを返します。
+DOM の document.getElementById に相当します。
+
+使用例:
+
+js
+コピーする
+const element = localSpace.getElementById("100213200122640");
+if (element) {
+  // element に対して操作を行う
+} else {
+  // 該当するエレメントが見つからなかった場合
+}
+実装例（疑似コード）:
+
+js
+コピーする
+class LocalSpace {
+  constructor(options) {
+    // ... 初期化処理
+    this._elements = new Map(); // 空間エレメントを内部的に管理する
+  }
+
+  // 既存の space() メソッド内でエレメント生成時に登録することを想定
+  _registerElement(element) {
+    this._elements.set(element.id(), element);
+  }
+
+  getElementById(id) {
+    return this._elements.get(id) || null;
+  }
+}
+1.3.2 querySelectorAll(selector: string): LocalSpatialId[]
+説明:
+空間ドキュメント内で、指定されたセレクタに一致する全ての空間エレメントを配列で返します。
+DOM の document.querySelectorAll に相当します。
+初期実装では、CSS ライクなセレクタとして以下の仕様をサポートします:
+
+ID セレクタ: セレクタ文字列が #<id> の形式の場合、
+該当するエレメントがあれば配列として返します（存在しなければ空配列）。
+※ 将来的には、クラス名や属性、階層構造などに基づくセレクタも拡張可能です。
+
+使用例:
+
+js
+コピーする
+// ID セレクタの場合
+const elements = localSpace.querySelectorAll("#100213200122640");
+elements.forEach(element => {
+  // element に対して処理を行う
+});
+実装例（疑似コード）:
+
+js
+コピーする
+class LocalSpace {
+  // ... 既存の実装
+
+  querySelectorAll(selector) {
+    const results = [];
+    // ID セレクタの例: "#someId"
+    if (selector.startsWith("#")) {
+      const id = selector.slice(1);
+      const element = this.getElementById(id);
+      if (element) {
+        results.push(element);
+      }
+    }
+    // TODO: 将来的にクラスセレクタや属性セレクタの実装を追加
+    return results;
+  }
+}
+2. 空間エレメント: LocalSpatialId
+LocalSpatialId は、空間ドキュメント内の個々のエレメントを表し、HTML の DOM エレメントのように扱えます。
+通常、LocalSpace#space メソッドや内部のエレメント登録処理を通じて生成されます。
+
+2.1 エレメントのジオメトリ取得
+.center → { x: number, y: number, z: number }
+空間エレメントの中心座標を返します。
+
+.vertices → [[x, y, z], ...]（全 8 頂点の配列）
+エレメントを構成する 3D ボックスの各頂点の座標を返します。
+
+.alt → number
+空間エレメントの最低高度（床面）を返します。
+
+.zoom → number
+エレメントの分解能（ズームレベル）を示します。
+
+.zfxy → { z: number, f: number, x: number, y: number }
+ZFXY 表現をオブジェクト形式で返します。
+
+.id および .tilehash → string
+エレメントの ZFXY をハッシュ化した文字列を返します。
+
+.zfxyStr → string
+URL パス形式（例: /15/6/2844/17952）でエレメントの ZFXY を表現します。
+
+2.2 空間内のナビゲーション
+（DOM の parentElement や children、隣接要素取得に相当）
+
+.up(by?: number)
+.down(by?: number)
+.north(by?: number), .east(by?: number), .south(by?: number), .west(by?: number)
+.move(by: Partial<Omit<ZFXYTile, 'z'>>)
+.surroundings()
+各メソッドは、現在のエレメントを基点として、空間内での相対位置にあるエレメントを取得します。
+
+2.3 エレメント階層の操作
+.parent(atZoom?: number)
+.children()
+.contains(input: LocalSpatialId | GeoJSON.Geometry)
+エレメント間の階層関係や包含関係を操作できます。
+
+2.4 グローバル空間との変換
+.toContainingGlobalSpatialId()
+.toGlobalSpatialIds(zoom: number)
+.toGeoJSON()
+ローカル空間エレメントとグローバル空間エレメントとの相互変換を行います。
+
+3. まとめ
+この fxyz ライブラリでは、
+
+LocalSpace を「空間ドキュメント」として、全体の 3D 空間を管理し、
+LocalSpatialId を DOM エレメントのように扱い、個々の空間ユニットの生成・取得、幾何学的な情報取得、階層・隣接関係の操作を行います。
+さらに、DOM の getElementById および querySelectorAll に類似するメソッドを実装することで、既存の DOM 操作の知識を活かした直感的な空間操作を可能にしています。
+（なお、内部仕様や名称は今後変更される可能性がありますので、ご留意ください。）
 
 
-##### `.spacesFromGeoJSON(zoom: number, input: GeoJSON.Geometry)` -> `LocalSpatialId[]`
 
-* GeoJSON Feature がインプットとし、内包する指定のズームレベルのローカル空間IDを算出します。
-* 基準点の設定が未設定の場合、例外が発生します。
-
-##### `.boundingSpaceFromGeoJSON(input: GeoJSON.Geometry)` -> `LocalSpatialId`
-
-* GeoJSON Feature がインプットとし、内包する最小のローカル空間IDを算出します。
-* 基準点の設定が未設定の場合、例外が発生します。
-
-## `LocalSpatialId`
-
-`LocalSpatialId` は基本的に `LocalNamespace#space` で作成します。
-
-### メソッド
-
-[グローバル空間IDのメソッド](https://github.com/spatial-id/javascript-sdk?tab=readme-ov-file#%E3%83%A1%E3%82%BD%E3%83%83%E3%83%89) と同等な機能を持たしております。該当するメソッドを、下記に引用しております。
-
-#### `.center` -> `{x: number, y: number, z: number}`
-
-* 現在の空間オブジェクトの中央点 (3Dの `{x: number, y: number, z: number}` 型)
-
-#### `.vertices` -> `[x, y, z][8]`
-
-* 現在の空間オブジェクトの8頂点がそれぞれ配列として返す。
-
-#### `.alt` -> `number`
-
-* 現在の空間オブジェクトの最低高さ (floor)
-
-#### `.zoom` -> `number`
-
-* 現在の空間オブジェクトのズームレベル（分解能）
-
-#### `.zfxy` -> `{ z: number, f: number, x: number, y: number }`
-
-* 現在の空間オブジェクトが表現している ZFXY を ZFXYTile 型 (`{ z: number, f: number, x: number, y: number }`)
-
-#### `.id`, `.tilehash` -> `string`
-
-* 現在の空間オブジェクトが表現している ZFXY の tilehash の文字列
-
-#### `.zfxyStr` -> `string`
-
-* 現在の空間オブジェクトが表現している ZFXY を URL のパス型に変換したもの
-
-#### `.up(by?: number)` -> `LocalNamespace`
-
-![up](https://user-images.githubusercontent.com/309946/168220328-47e09300-c4dc-4ad1-adae-2cb17aff23ab.png)
-
-* パラメータがない場合は、現在の空間オブジェクトのひとつ上の空間オブジェクトを返す
-* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
-
-#### `.down(by?: number)` -> `LocalNamespace`
-
-![down](https://user-images.githubusercontent.com/309946/168220818-f89a73b1-b99c-462d-9fcb-5eae0eac03eb.png)
-
-* パラメータがない場合は現在の空間オブジェクトのひとつ下の空間オブジェクトを返す
-* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
-
-#### `.north(by?: number), .east(by?: number), south(by?: number), .west(by?: number)` -> `LocalNamespace`
-
-![north](https://user-images.githubusercontent.com/309946/168221234-b03809ef-6c69-442b-98d3-583b4391108e.png)
-
-* こちらの東西南北はローカル座標系内の方位となります。
-* パラメータがない場合は、現在の空間オブジェクトの隣のオブジェクトを返す
-* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
-
-#### `.move(by: Partial<Omit<ZFXYTile, 'z'>>)` -> `LocalNamespace`
-
-* 現在の空間オブジェクトから相対的な新しいオブジェクトを返す。 `by` は少なくとも `x, y, f` の一つ以上を含めてください
-
-```
-space.move({x: 1, y: 5, f: -1})
-```
-
-上記の例の場合では、返り値は西1マス、北5マス、下1マスにある空間オブジェクト
-
-#### `.surroundings()` -> `LocalNamespace[]`
-
-![surroundings](https://user-images.githubusercontent.com/309946/168221371-b1ec30c7-f501-4a6b-ad64-5a6345fb9665.png)
-
-* 現在の空間オブジェクトのまわりにあるすべての空間オブジェクトを配列で返す。
-
-#### `.parent(atZoom?: number)` -> `LocalNamespace`
-
-* 現在の空間オブジェクトから、分解能（ズームレベル）を `atZoom` のズームレベルまで下げる。デフォルトでは1段階下げます。
-
-#### `.children()` -> `LocalNamespace[]`
-
-* 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
-
-#### `.contains(input: LocalSpatialId | GeoJSON.Geometry)` -> `bool`
-
-* 指定されたローカル空間IDまたは任意なGeoJSONが、指定されたボクセル内に含まれるかどうかを判定して bool 値を返す。
-* input の ローカル空間ID が違うローカル空間で作られたものの場合、例外が発生します。
-* input が GeoJSON かつ、基準点の設定が未設定の場合、例外が発生します。
-
-#### `.toContainingGlobalSpatialId()` -> `Space`
-
-* 現在の空間オブジェクトがすべて内包できるグローバル空間IDを返します。
-* 基準点の設定が未設定の場合、例外が発生します。
-
-#### `.toGlobalSpatialIds(zoom: number)` -> `Space[]`
-
-* 現在の空間オブジェクトを内包できるグローバル空間IDを、指定のズームレベルのグローバル空間オブジェクトを配列で返します。
-* 基準点の設定が未設定の場合、例外が発生します。
-
-#### `.toGeoJSON()` -> `GeoJSON.Geometry`
-
-* 現在の空間オブジェクトをGeoJSONとして出力する（２次元）
-* 基準点の設定が未設定の場合、例外が発生します。
