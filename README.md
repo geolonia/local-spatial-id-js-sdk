@@ -4,9 +4,6 @@
 
 ## このライブラリの内容
 
-* `LocalSpace` - ローカル空間を管理します。
-* `LocalSpatialId` - ローカル空間内の空間を指すためのローカル空間IDを管理します。
-
 ## `LocalSpace`
 
 ### コンストラクタ
@@ -15,27 +12,15 @@
 new LocalSpace( options: LocalSpaceOptions )
 ```
 
-ローカル空間をインスタンス化します。新しい空間を作るときや、既存の空間に対して処理を行うときに使います。このローカル空間では、XYZ座標を使います。ぞれぞれの軸の定義は下記となります:
-
-* `x` は右左
-* `y` は前奥
-* `z` は上下
+ローカル空間をインスタンス化します。新しい空間を作るときに使います。
 
 ```
 interface LocalSpaceOptions {
-  /// 任意な一意な文字列。他のローカル空間と識別するために使います。
-  id?: string
-
   /// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
   scale: number
-
   /// ローカル空間全体の高さ。メートルで指定。指定がなければ、 `scale` と同じ値が使われます。
   scale_height?: number
-
-  name?: string
-  description?: string
-
-  /// ローカル空間をグローバル空間とマッピングする場合、基準点をしていしなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
+  /// ローカル空間をグローバル空間とマッピングする場合、基準点を指定しなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
   origin_latitude?: number
   origin_longitude?: number
   origin_altitude?: number
