@@ -1,125 +1,111 @@
-# Spatial Object Model （仕様のドラフト）
+# 3D 空間 ID 共通ライブラリ (ローカル空間ID用)
 
-## LSOM (Local Spatial Object Model) Core
+- 注意：このライブラリはまだ設計段階です。それぞれのクラス名・メソッド名は変わる可能性があるのでご注意ください。
 
 ### コンストラクタ
 
-new  LocalSpace(options: LocalSpaceOptions)
+#### `new LocalSpace(options: LocalSpaceOptions)`
 
-LocalSpaceOptions
-/// ローカル空間全体の１軸の最大長さ。メートルで指定。例えば 1 の場合、該当のローカル空間の最大収容可能な地物は 1m×1m×1m の 1m3 となります。
-scale: number
+ローカル空間 (`LocalSpace`) の新しいインスタンスを作成します。
 
-/// ローカル空間全体の高さ。メートルで指定。指定がなければ、 `scale` と同じ値が使われます。
-scale_height?: number
+#### `LocalSpaceOptions`
+| プロパティ          | 型      | 説明 |
+|-----------------|--------|------------------------|
+| `scale`        | number | ローカル空間の１軸の最大長さ (メートル単位)。例: `1` を指定すると、最大 `1m × 1m × 1m` の空間を定義します。 |
+| `scale_height` | number | ローカル空間の高さ (メートル単位)。未指定の場合、`scale` と同じ値が適用されます。 |
+| `origin_latitude` | number | グローバル座標とのマッピング用の基準点 (緯度)。 |
+| `origin_longitude` | number | グローバル座標とのマッピング用の基準点 (経度)。 |
+| `origin_altitude` | number | 基準点の高度。デフォルトは `0`。 |
+| `origin_angle` | number | 基準点の角度。デフォルトは `0`。 |
 
-/// ローカル空間をグローバル空間とマッピングする場合、基準点をしていしなければなりません。 `altitude` または `angle` はデフォルトで `0` となります。
-origin_latitude?: number
-origin_longitude?: number
-origin_altitude?: number
-origin_angle?: number
+#### 返り値
+`Space` インスタンス
 
-返り値: Space
+---
 
+### インスタンス
 
-### Spaceインスタンス
-
-インスタンスのローカル空間オブジェクトは以下のようなインターフェスをもつこと。
-
-
-## Properties
-
-.center -> {x: number, y: number, z: number}
-現在の空間オブジェクトの中央点 (3Dの {x: number, y: number, z: number} 型)
-.vertices -> [x, y, z][8]
-現在の空間オブジェクトの8頂点がそれぞれ配列として返す。
-.alt -> number
-現在の空間オブジェクトの最低高さ (floor)
-.zoom -> number
-現在の空間オブジェクトのズームレベル（分解能）
-.zfxy -> { z: number, f: number, x: number, y: number }
-現在の空間オブジェクトが表現している ZFXY を ZFXYTile 型 ({ z: number, f: number, x: number, y: number })
-.id, .tilehash -> string
-現在の空間オブジェクトが表現している ZFXY の tilehash の文字列
-.zfxyStr -> string
+#### `Space`
 
 
+### プロパティ
 
-## Methods
+| プロパティ   | 型 | 説明 |
+|------------|--------------------------|------------------------------------------|
+| `.center`  | `{x: number, y: number, z: number}` | 空間オブジェクトの中央点 (3D 座標)。 |
+| `.vertices` | `[ [x, y, z], [x, y, z], ... ]` | 空間オブジェクトの 8 頂点の座標を配列で返します。 |
+| `.alt` | `number` | 空間オブジェクトの最低高度 (floor) 。 |
+| `.zoom` | `number` | 空間オブジェクトのズームレベル (分解能)。 |
+| `.zfxy` | `{ z: number, f: number, x: number, y: number }` | 空間オブジェクトの `ZFXYTile` 情報。 |
+| `.id` `.tilehash` | `string` | `ZFXYTile` の tilehash 文字列。 |
+| `.zfxyStr` | `string` | `ZFXY` の文字列表現。 |
 
-### .getLocalSpaceById()
+---
 
-* ID を引数として受け取り空間オブジェクトを返す。
+### メソッド
 
-### .querySelector()
+#### `.getLocalSpaceById(id: string): Space`
+指定された `ID` に対応する空間オブジェクトを取得します。
 
-- メソッドは、指定された空間セレクター（緯度経度及び高度、ZFXY）に一致する最初の 空間オブジェクト を返します。
-- 一致するものが見つからない場合は null を返します。
+#### `.querySelector(selector: { lat: number, lng: number, alt?: number, zfxy?: { z: number, f: number, x: number, y: number } }): Space | null`
+指定された空間セレクター (緯度経度および高度、または `ZFXY`) に一致する最初の空間オブジェクトを返します。
 
-### .up()
+#### `.up(count?: number): Space | Space[]`
+現在の空間オブジェクトの上位の空間オブジェクトを取得します。
+- `count` が指定されると、その数分だけ上位の空間オブジェクトを配列で返します。
+- 負の値を指定すると、`down()` と同様の動作になります。
+- メートル単位の移動ができるようにすることも検討中。
 
-![up](https://user-images.githubusercontent.com/309946/168220328-47e09300-c4dc-4ad1-adae-2cb17aff23ab.png)
+#### `.down(count?: number): Space | Space[]`
+現在の空間オブジェクトの下位の空間オブジェクトを取得します。
+- `count` が指定されると、その数分だけ下位の空間オブジェクトを配列で返します。
+- 負の値を指定すると、`up()` と同様の動作になります。
+- メートル単位の移動ができるようにすることも検討中。
 
-* パラメータがない場合は、現在の空間オブジェクトのひとつ上の空間オブジェクトを返す。
-* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す(？)
-* マイナスも受け付けられるといい。
-* メートルで指定できるといいかも(？)
+#### `.north(count?: number), .east(count?: number), .south(count?: number), .west(count?: number): Space | Space[]`
+現在の空間オブジェクトの隣接する空間オブジェクトを取得します。
+- `count` が指定されると、その数分だけ隣接する空間オブジェクトを配列で返します。
+- 負の値を指定すると、逆方向に移動します。
+- メートル単位の移動ができるようにすることも検討中。
 
-### .down()
+#### `.surroundings(): Space[]`
+現在の空間オブジェクトの周囲にあるすべての空間オブジェクトを配列で返します。
 
-![down](https://user-images.githubusercontent.com/309946/168220818-f89a73b1-b99c-462d-9fcb-5eae0eac03eb.png)
+#### `.parent(): Space`
+現在の空間オブジェクトのズームレベルを一つ下げた親の空間オブジェクトを返します。
 
-* パラメータがない場合は現在の空間オブジェクトのひとつ下の空間オブジェクトを返す。
-* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す(？)
-* マイナスも受け付けられるといい。
-* メートルで指定できるといいかも(？)
+#### `.children(): Space[]`
+現在の空間オブジェクトのズームレベルを一つ上げた子の空間オブジェクトをすべて取得します。
 
-### .north(), .east(), south(), .west()
+#### `.contains(point: { lat: number, lng: number }): boolean`
+指定された緯度経度が、この空間オブジェクト内に含まれるかどうかを判定して `true` / `false` を返します。
 
-![north](https://user-images.githubusercontent.com/309946/168221234-b03809ef-6c69-442b-98d3-583b4391108e.png)
+#### `.vertices3d(): [ [x, y, z], [x, y, z], ... ]`
+現在の空間オブジェクトの 3D バウンディングボックスを形成する 8 点の座標を配列で返します。
 
-* パラメータがない場合は、現在の空間オブジェクトの隣のオブジェクトを返す。
-* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す(？)
-* マイナスも受け付けられるといい。
-* メートルで指定できるといいかも(？)
+#### `.toContainingGlobalSpatialId(): Space`
+現在の空間オブジェクトをすべて内包できるグローバル空間 ID を取得します。
+- 基準点が未設定の場合、例外をスローします。
 
-### .surroundings()
+#### `.toGlobalSpatialIds(zoom: number): Space[]`
+指定されたズームレベルで、現在の空間オブジェクトを内包できるグローバル空間 ID を取得します。
+- 基準点が未設定の場合、例外をスローします。
 
-![surroundings](https://user-images.githubusercontent.com/309946/168221371-b1ec30c7-f501-4a6b-ad64-5a6345fb9665.png)
+#### `.toGeoJSON(): GeoJSON.Geometry`
+現在の空間オブジェクトを `GeoJSON` 形式で取得します。
 
-* 現在の空間オブジェクトのまわりにあるすべての空間オブジェクトを配列で返す。
+---
 
-### .parent()
-
-* 現在の空間オブジェクトから、分解能（ズームレベル）を一つ下げて、その空間オブジェクトを返す。
-
-### .children()
-
-* 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
-
-### .contains()
-
-* 指定された緯度経度が、指定されたボクセル内に含まれるかどうかを判定して bool 値を返す。
-
-### .vertices3d()
-
-* 現在の空間オブジェクトの3Dバウンディングボックスを作る8点の座標を配列として返す。
-
-### .toContainingGlobalSpatialId() -> Space
-現在の空間オブジェクトがすべて内包できるグローバル空間IDを返します。
-基準点の設定が未設定の場合、例外が発生します。
-
-### .toGlobalSpatialIds(zoom: number) -> Space[]
-* 現在の空間オブジェクトを内包できるグローバル空間IDを、指定のズームレベルのグローバル空間オブジェクトを配列で返します。
-* 基準点の設定が未設定の場合、例外が発生します。
-
-### .toGeoJSON() -> GeoJSON.Geometry
-
-## 参考: NodeJS ベースの SDK （があると仮定して）での実装例
+## 使用例 (Node.js SDK)
 
 ```node
-const space = new Space(12345678) // 空間ID、緯度経度及び高度、ZFXYのいずれか
+const space = new LocalSpace({ scale: 1, origin_latitude: 35.710271, origin_longitude: 139.810887 })
 
-// 南へ一つ、上へひとつ、東へひとつ移動したあとで、そこにスカイツリーの頂上があるかどうかを判定する。
-const result = space.south().up().east().contains({lng: 139.81088744999997, lat: 35.71027146141545, alt: 634})
+// 南へ1つ、上へ1つ、東へ1つ移動し、スカイツリーの頂上が含まれるかを判定
+const result = space.south().up().east().contains({
+  lng: 139.810887,
+  lat: 35.710271,
+  alt: 634
+});
+console.log(result); // true or false
 ```
