@@ -4,15 +4,15 @@
 
 ## このライブラリの内容
 
-* `LocalNamespace` - ローカル空間を管理します。
+* `LocalSpace` - ローカル空間を管理します。
 * `LocalSpatialId` - ローカル空間内の空間を指すためのローカル空間IDを管理します。
 
-## `LocalNamespace`
+## `LocalSpace`
 
 ### コンストラクタ
 
 ```
-new LocalNamespace( options: LocalNamespaceOptions )
+new LocalSpace( options: LocalSpaceOptions )
 ```
 
 ローカル空間をインスタンス化します。新しい空間を作るときや、既存の空間に対して処理を行うときに使います。このローカル空間では、XYZ座標を使います。ぞれぞれの軸の定義は下記となります:
@@ -22,7 +22,7 @@ new LocalNamespace( options: LocalNamespaceOptions )
 * `z` は上下
 
 ```
-interface LocalNamespaceOptions {
+interface LocalSpaceOptions {
   /// 任意な一意な文字列。他のローカル空間と識別するために使います。
   id?: string
 
@@ -45,7 +45,7 @@ interface LocalNamespaceOptions {
 
 ### メソッド
 
-`LocalNamespace` をインスタンス化されたあとで、その空間内のローカル空間IDを操作することができます。
+`LocalSpace` をインスタンス化されたあとで、その空間内のローカル空間IDを操作することができます。
 
 ##### `.space(input)` -> `LocalSpatialId`
 
@@ -70,7 +70,7 @@ interface LocalNamespaceOptions {
 
 ## `LocalSpatialId`
 
-`LocalSpatialId` は基本的に `LocalNamespace#space` で作成します。
+`LocalSpatialId` は基本的に `LocalSpace#space` で作成します。
 
 ### メソッド
 
@@ -104,21 +104,21 @@ interface LocalNamespaceOptions {
 
 * 現在の空間オブジェクトが表現している ZFXY を URL のパス型に変換したもの
 
-#### `.up(by?: number)` -> `LocalNamespace`
+#### `.up(by?: number)` -> `LocalSpace`
 
 ![up](https://user-images.githubusercontent.com/309946/168220328-47e09300-c4dc-4ad1-adae-2cb17aff23ab.png)
 
 * パラメータがない場合は、現在の空間オブジェクトのひとつ上の空間オブジェクトを返す
 * パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
 
-#### `.down(by?: number)` -> `LocalNamespace`
+#### `.down(by?: number)` -> `LocalSpace`
 
 ![down](https://user-images.githubusercontent.com/309946/168220818-f89a73b1-b99c-462d-9fcb-5eae0eac03eb.png)
 
 * パラメータがない場合は現在の空間オブジェクトのひとつ下の空間オブジェクトを返す
 * パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
 
-#### `.north(by?: number), .east(by?: number), south(by?: number), .west(by?: number)` -> `LocalNamespace`
+#### `.north(by?: number), .east(by?: number), south(by?: number), .west(by?: number)` -> `LocalSpace`
 
 ![north](https://user-images.githubusercontent.com/309946/168221234-b03809ef-6c69-442b-98d3-583b4391108e.png)
 
@@ -126,7 +126,7 @@ interface LocalNamespaceOptions {
 * パラメータがない場合は、現在の空間オブジェクトの隣のオブジェクトを返す
 * パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
 
-#### `.move(by: Partial<Omit<ZFXYTile, 'z'>>)` -> `LocalNamespace`
+#### `.move(by: Partial<Omit<ZFXYTile, 'z'>>)` -> `LocalSpace`
 
 * 現在の空間オブジェクトから相対的な新しいオブジェクトを返す。 `by` は少なくとも `x, y, f` の一つ以上を含めてください
 
@@ -136,17 +136,17 @@ space.move({x: 1, y: 5, f: -1})
 
 上記の例の場合では、返り値は西1マス、北5マス、下1マスにある空間オブジェクト
 
-#### `.surroundings()` -> `LocalNamespace[]`
+#### `.surroundings()` -> `LocalSpace[]`
 
 ![surroundings](https://user-images.githubusercontent.com/309946/168221371-b1ec30c7-f501-4a6b-ad64-5a6345fb9665.png)
 
 * 現在の空間オブジェクトのまわりにあるすべての空間オブジェクトを配列で返す。
 
-#### `.parent(atZoom?: number)` -> `LocalNamespace`
+#### `.parent(atZoom?: number)` -> `LocalSpace`
 
 * 現在の空間オブジェクトから、分解能（ズームレベル）を `atZoom` のズームレベルまで下げる。デフォルトでは1段階下げます。
 
-#### `.children()` -> `LocalNamespace[]`
+#### `.children()` -> `LocalSpace[]`
 
 * 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
 
