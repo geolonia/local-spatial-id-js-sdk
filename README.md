@@ -103,7 +103,7 @@ space.move({x: 1, y: 5, f: -1})
 
 * 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
 
-#### `.contains(input: LocalSpatialId | GeoJSON.Geometry)` -> `bool`
+#### `.contains(input: LocalSpatialId | GeoJSON.Geometry): bool`
 
 * 指定されたローカル空間IDまたは任意なGeoJSONが、指定されたボクセル内に含まれるかどうかを判定して bool 値を返す。
 * input の ローカル空間ID が違うローカル空間で作られたものの場合、例外が発生します。
@@ -119,7 +119,7 @@ space.move({x: 1, y: 5, f: -1})
 * 現在の空間オブジェクトを内包できるグローバル空間IDを、指定のズームレベルのグローバル空間オブジェクトを配列で返します。
 * 基準点の設定が未設定の場合、例外が発生します。
 
-#### `.toGeoJSON()` -> `GeoJSON.Geometry`
+#### `.toGeoJSON(): GeoJSON.Geometry`
 
 * 現在の空間オブジェクトをGeoJSONとして出力する（２次元）
 * 基準点の設定が未設定の場合、例外が発生します。
