@@ -2,11 +2,11 @@
 
 - 注意：このライブラリはまだ設計段階です。それぞれのクラス名・メソッド名は変わる可能性があるのでご注意ください。
 
-### LocalSpace
+## LocalSpace
 
 - `LocalSpace` は、基準点と高さ幅を指定したローカル空間を表し、このAPIを使用してローカル空間を操作することができます。
 
-#### コンストラクタ
+### コンストラクタ
 
 ```
 new LocalSpace(options: LocalSpaceOptions)
@@ -14,7 +14,7 @@ new LocalSpace(options: LocalSpaceOptions)
 
 ローカル空間 (`LocalSpace`) の新しいインスタンスである、`LocalSpace` オブジェクトを返します。
 
-#### コンストラクタ引数
+### コンストラクタ引数
 
 `LocalSpaceOptions`
 | プロパティ          | 型      | 説明 |
@@ -50,12 +50,13 @@ const localSpace = new LocalSpace(options: LocalSpaceOptions);
 
 ### メソッド
 
-#### `.getLocalSpaceById(id: string): LocalSpace`
-指定された `ID` に対応する空間オブジェクトを取得します。
+#### `.getSpaceById(input: zfxy | zfxyStr): LocalSpace`
 
-#### `.querySelector(selector: { lat: number, lng: number, alt: number, zoom: number, zfxy?: { z: number, f: number, x: number, y: number } }): LocalSpace | null`
-指定された空間セレクター (緯度、経度、高度、ズームレベル、または `ZFXY`) に一致する最初の空間オブジェクトを返します。
+* `zfxyStr` もしくは、`zfxy` オブジェクトを引数として受け取りローカル空間オブジェクトを返す。
 
+#### `.getSpaceByLocation(lng: number, lat: number, alt: number, zoom: number): LocalSpace`
+
+* 緯度、経度、高度、ズームレベルを引数として受け取りローカル空間オブジェクトを返す。
 
 #### `.up(by?: number): LocalSpace`
 
@@ -103,7 +104,7 @@ localSpace.move({x: 1, y: 5, f: -1})
 
 * 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
 
-#### `.contains(input: LocalSpatialId | GeoJSON.Geometry): bool`
+#### `.contains(input: zfxy | zfxyStr | GeoJSON.Geometry): bool`
 
 * 指定されたローカル空間IDまたは任意なGeoJSONが、指定されたボクセル内に含まれるかどうかを判定して bool 値を返す。
 * input の ローカル空間ID が違うローカル空間で作られたものの場合、例外が発生します。
