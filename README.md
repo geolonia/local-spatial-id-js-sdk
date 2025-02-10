@@ -84,7 +84,7 @@ const localSpace = new LocalSpace(options: LocalSpaceOptions);
 * 現在の空間オブジェクトから相対的な新しいオブジェクトを返す。 `by` は少なくとも `x, y, f` の一つ以上を含めてください
 
 ```
-space.move({x: 1, y: 5, f: -1})
+localSpace.move({x: 1, y: 5, f: -1})
 ```
 
 上記の例の場合では、返り値は西1マス、北5マス、下1マスにある空間オブジェクト
