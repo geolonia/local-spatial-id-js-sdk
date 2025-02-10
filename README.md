@@ -2,13 +2,21 @@
 
 - 注意：このライブラリはまだ設計段階です。それぞれのクラス名・メソッド名は変わる可能性があるのでご注意ください。
 
-### コンストラクタ
+### LocalSpace
 
-#### `new LocalSpace(options: LocalSpaceOptions)`
+- `LocalSpace` は、基準点と高さ幅を指定したローカル空間を表し、このAPIを使用してローカル空間を操作することができます。
 
-ローカル空間 (`LocalSpace`) の新しいインスタンスを作成します。
+#### コンストラクタ
 
-#### `LocalSpaceOptions`
+```
+new LocalSpace(options: LocalSpaceOptions)
+```
+
+ローカル空間 (`LocalSpace`) の新しいインスタンスである、`LocalSpace` オブジェクトを返します。
+
+#### コンストラクタ引数
+
+`LocalSpaceOptions`
 | プロパティ          | 型      | 説明 |
 |-----------------|--------|------------------------|
 | `scale`        | number | ローカル空間の１軸の最大長さ (メートル単位)。例: `1` を指定すると、最大 `1m × 1m × 1m` の空間を定義します。 |
@@ -18,15 +26,15 @@
 | `origin_altitude` | number | 基準点の高度。デフォルトは `0`。 |
 | `origin_angle` | number | 基準点の角度。デフォルトは `0`。 |
 
-#### 返り値
-`Space` インスタンス
-
 ---
 
-### インスタンス
+### LocalSpace オブジェクト
 
-#### `Space`
+#### `LocalSpace`
 
+```
+const localSpace = new LocalSpace(options: LocalSpaceOptions);
+```
 
 ### プロパティ
 
@@ -44,37 +52,37 @@
 
 ### メソッド
 
-#### `.getLocalSpaceById(id: string): Space`
+#### `.getLocalSpaceById(id: string): LocalSpace`
 指定された `ID` に対応する空間オブジェクトを取得します。
 
-#### `.querySelector(selector: { lat: number, lng: number, alt?: number, zfxy?: { z: number, f: number, x: number, y: number } }): Space | null`
+#### `.querySelector(selector: { lat: number, lng: number, alt?: number, zfxy?: { z: number, f: number, x: number, y: number } }): LocalSpace | null`
 指定された空間セレクター (緯度経度および高度、または `ZFXY`) に一致する最初の空間オブジェクトを返します。
 
-#### `.up(count?: number): Space | Space[]`
+#### `.up(count?: number): LocalSpace | LocalSpace[]`
 現在の空間オブジェクトの上位の空間オブジェクトを取得します。
 - `count` が指定されると、その数分だけ上位の空間オブジェクトを配列で返します。
 - 負の値を指定すると、`down()` と同様の動作になります。
 - メートル単位の移動ができるようにすることも検討中。
 
-#### `.down(count?: number): Space | Space[]`
+#### `.down(count?: number): LocalSpace | LocalSpace[]`
 現在の空間オブジェクトの下位の空間オブジェクトを取得します。
 - `count` が指定されると、その数分だけ下位の空間オブジェクトを配列で返します。
 - 負の値を指定すると、`up()` と同様の動作になります。
 - メートル単位の移動ができるようにすることも検討中。
 
-#### `.north(count?: number), .east(count?: number), .south(count?: number), .west(count?: number): Space | Space[]`
+#### `.north(count?: number), .east(count?: number), .south(count?: number), .west(count?: number): LocalSpace | LocalSpace[]`
 現在の空間オブジェクトの隣接する空間オブジェクトを取得します。
 - `count` が指定されると、その数分だけ隣接する空間オブジェクトを配列で返します。
 - 負の値を指定すると、逆方向に移動します。
 - メートル単位の移動ができるようにすることも検討中。
 
-#### `.surroundings(): Space[]`
+#### `.surroundings(): LocalSpace[]`
 現在の空間オブジェクトの周囲にあるすべての空間オブジェクトを配列で返します。
 
-#### `.parent(): Space`
+#### `.parent(): LocalSpace`
 現在の空間オブジェクトのズームレベルを一つ下げた親の空間オブジェクトを返します。
 
-#### `.children(): Space[]`
+#### `.children(): LocalSpace[]`
 現在の空間オブジェクトのズームレベルを一つ上げた子の空間オブジェクトをすべて取得します。
 
 #### `.contains(point: { lat: number, lng: number }): boolean`
@@ -83,11 +91,11 @@
 #### `.vertices3d(): [ [x, y, z], [x, y, z], ... ]`
 現在の空間オブジェクトの 3D バウンディングボックスを形成する 8 点の座標を配列で返します。
 
-#### `.toContainingGlobalSpatialId(): Space`
+#### `.toContainingGlobalSpatialId(): LocalSpace`
 現在の空間オブジェクトをすべて内包できるグローバル空間 ID を取得します。
 - 基準点が未設定の場合、例外をスローします。
 
-#### `.toGlobalSpatialIds(zoom: number): Space[]`
+#### `.toGlobalSpatialIds(zoom: number): LocalSpace[]`
 指定されたズームレベルで、現在の空間オブジェクトを内包できるグローバル空間 ID を取得します。
 - 基準点が未設定の場合、例外をスローします。
 
@@ -95,6 +103,7 @@
 現在の空間オブジェクトを `GeoJSON` 形式で取得します。
 
 ---
+
 
 ## 使用例 (Node.js SDK)
 
