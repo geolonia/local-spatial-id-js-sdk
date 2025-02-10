@@ -30,8 +30,6 @@ new LocalSpace(options: LocalSpaceOptions)
 
 ### LocalSpace オブジェクト
 
-#### `LocalSpace`
-
 ```
 const localSpace = new LocalSpace(options: LocalSpaceOptions);
 ```
