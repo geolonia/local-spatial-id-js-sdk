@@ -53,8 +53,8 @@ const localSpace = new LocalSpace(options: LocalSpaceOptions);
 #### `.getLocalSpaceById(id: string): LocalSpace`
 指定された `ID` に対応する空間オブジェクトを取得します。
 
-#### `.querySelector(selector: { lat: number, lng: number, alt?: number, zfxy?: { z: number, f: number, x: number, y: number } }): LocalSpace | null`
-指定された空間セレクター (緯度経度および高度、または `ZFXY`) に一致する最初の空間オブジェクトを返します。
+#### `.querySelector(selector: { lat: number, lng: number, alt: number, zoom: number, zfxy?: { z: number, f: number, x: number, y: number } }): LocalSpace | null`
+指定された空間セレクター (緯度、経度、高度、ズームレベル、または `ZFXY`) に一致する最初の空間オブジェクトを返します。
 
 
 #### `.up(by?: number): LocalSpace`
