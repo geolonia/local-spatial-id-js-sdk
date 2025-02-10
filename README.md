@@ -56,49 +56,73 @@ const localSpace = new LocalSpace(options: LocalSpaceOptions);
 #### `.querySelector(selector: { lat: number, lng: number, alt?: number, zfxy?: { z: number, f: number, x: number, y: number } }): LocalSpace | null`
 指定された空間セレクター (緯度経度および高度、または `ZFXY`) に一致する最初の空間オブジェクトを返します。
 
-#### `.up(count?: number): LocalSpace | LocalSpace[]`
-現在の空間オブジェクトの上位の空間オブジェクトを取得します。
-- `count` が指定されると、その数分だけ上位の空間オブジェクトを配列で返します。
-- 負の値を指定すると、`down()` と同様の動作になります。
-- メートル単位の移動ができるようにすることも検討中。
 
-#### `.down(count?: number): LocalSpace | LocalSpace[]`
-現在の空間オブジェクトの下位の空間オブジェクトを取得します。
-- `count` が指定されると、その数分だけ下位の空間オブジェクトを配列で返します。
-- 負の値を指定すると、`up()` と同様の動作になります。
-- メートル単位の移動ができるようにすることも検討中。
+#### `.up(by?: number): LocalSpace`
 
-#### `.north(count?: number), .east(count?: number), .south(count?: number), .west(count?: number): LocalSpace | LocalSpace[]`
-現在の空間オブジェクトの隣接する空間オブジェクトを取得します。
-- `count` が指定されると、その数分だけ隣接する空間オブジェクトを配列で返します。
-- 負の値を指定すると、逆方向に移動します。
-- メートル単位の移動ができるようにすることも検討中。
+![up](https://user-images.githubusercontent.com/309946/168220328-47e09300-c4dc-4ad1-adae-2cb17aff23ab.png)
+
+* パラメータがない場合は、現在の空間オブジェクトのひとつ上の空間オブジェクトを返す
+* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
+
+#### `.down(by?: number): LocalSpace`
+
+![down](https://user-images.githubusercontent.com/309946/168220818-f89a73b1-b99c-462d-9fcb-5eae0eac03eb.png)
+
+* パラメータがない場合は現在の空間オブジェクトのひとつ下の空間オブジェクトを返す
+* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
+
+#### `.north(by?: number), .east(by?: number), south(by?: number), .west(by?: number): LocalSpace`
+
+![north](https://user-images.githubusercontent.com/309946/168221234-b03809ef-6c69-442b-98d3-583b4391108e.png)
+
+* こちらの東西南北はローカル座標系内の方位となります。
+* パラメータがない場合は、現在の空間オブジェクトの隣のオブジェクトを返す
+* パラメータが指定されている場合は、その個数分の空間オブジェクトを配列で返す
+
+#### `.move(by: Partial<Omit<ZFXYTile, 'z'>>): LocalSpace`
+
+* 現在の空間オブジェクトから相対的な新しいオブジェクトを返す。 `by` は少なくとも `x, y, f` の一つ以上を含めてください
+
+```
+space.move({x: 1, y: 5, f: -1})
+```
+
+上記の例の場合では、返り値は西1マス、北5マス、下1マスにある空間オブジェクト
 
 #### `.surroundings(): LocalSpace[]`
-現在の空間オブジェクトの周囲にあるすべての空間オブジェクトを配列で返します。
 
-#### `.parent(): LocalSpace`
-現在の空間オブジェクトのズームレベルを一つ下げた親の空間オブジェクトを返します。
+![surroundings](https://user-images.githubusercontent.com/309946/168221371-b1ec30c7-f501-4a6b-ad64-5a6345fb9665.png)
+
+* 現在の空間オブジェクトのまわりにあるすべての空間オブジェクトを配列で返す。
+
+#### `.parent(atZoom?: number): LocalSpace`
+
+* 現在の空間オブジェクトから、分解能（ズームレベル）を `atZoom` のズームレベルまで下げる。デフォルトでは1段階下げます。
 
 #### `.children(): LocalSpace[]`
-現在の空間オブジェクトのズームレベルを一つ上げた子の空間オブジェクトをすべて取得します。
 
-#### `.contains(point: { lat: number, lng: number }): boolean`
-指定された緯度経度が、この空間オブジェクト内に含まれるかどうかを判定して `true` / `false` を返します。
+* 現在の空間オブジェクトから、分解能（ズームレベル）を一つ上げて、そこに含まれるすべての空間オブジェクトを返す。
 
-#### `.vertices3d(): [ [x, y, z], [x, y, z], ... ]`
-現在の空間オブジェクトの 3D バウンディングボックスを形成する 8 点の座標を配列で返します。
+#### `.contains(input: LocalSpatialId | GeoJSON.Geometry)` -> `bool`
 
-#### `.toContainingGlobalSpatialId(): LocalSpace`
-現在の空間オブジェクトをすべて内包できるグローバル空間 ID を取得します。
-- 基準点が未設定の場合、例外をスローします。
+* 指定されたローカル空間IDまたは任意なGeoJSONが、指定されたボクセル内に含まれるかどうかを判定して bool 値を返す。
+* input の ローカル空間ID が違うローカル空間で作られたものの場合、例外が発生します。
+* input が GeoJSON かつ、基準点の設定が未設定の場合、例外が発生します。
 
-#### `.toGlobalSpatialIds(zoom: number): LocalSpace[]`
-指定されたズームレベルで、現在の空間オブジェクトを内包できるグローバル空間 ID を取得します。
-- 基準点が未設定の場合、例外をスローします。
+#### `.toContainingGlobalSpatialId(): Space`
 
-#### `.toGeoJSON(): GeoJSON.Geometry`
-現在の空間オブジェクトを `GeoJSON` 形式で取得します。
+* 現在の空間オブジェクトがすべて内包できるグローバル空間IDを返します。
+* 基準点の設定が未設定の場合、例外が発生します。
+
+#### `.toGlobalSpatialIds(zoom: number): Space[]`
+
+* 現在の空間オブジェクトを内包できるグローバル空間IDを、指定のズームレベルのグローバル空間オブジェクトを配列で返します。
+* 基準点の設定が未設定の場合、例外が発生します。
+
+#### `.toGeoJSON()` -> `GeoJSON.Geometry`
+
+* 現在の空間オブジェクトをGeoJSONとして出力する（２次元）
+* 基準点の設定が未設定の場合、例外が発生します。
 
 ---
 
