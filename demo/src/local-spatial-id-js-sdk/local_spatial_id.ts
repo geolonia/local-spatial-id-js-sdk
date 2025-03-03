@@ -168,7 +168,6 @@ export class LocalSpatialId {
     const xyzTile = bboxToTile(bbox);
 
     const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile));
-    console.log({tiles});
 
     return tiles
       .map((tile) => new SpatialId.Space(tile))
