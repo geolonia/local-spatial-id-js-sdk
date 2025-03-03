@@ -168,6 +168,7 @@ export class LocalSpatialId {
     const xyzTile = bboxToTile(bbox);
 
     const tiles = getChildrenAtZoom(zoom, xyfzTileAryToObj(xyzTile));
+    console.log({tiles});
 
     return tiles
       .map((tile) => new SpatialId.Space(tile))
@@ -244,6 +245,6 @@ export class LocalSpatialId {
 
   private _regenerateAttributesFromZFXY() {
     this.id = this.tilehash = generateTilehash(this.zfxy);
-    this.zfxyStr = `${this.zfxy.z}/${this.zfxy.f}/${this.zfxy.x}/${this.zfxy.y}`;
+    this.zfxyStr = `/${this.zfxy.z}/${this.zfxy.f}/${this.zfxy.x}/${this.zfxy.y}`;
   }
 }
