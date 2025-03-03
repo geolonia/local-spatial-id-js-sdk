@@ -18,6 +18,10 @@ type NSParams = {
   originAngle: number;
 };
 
+function removeFirstSlash(str: string) {
+  return str.startsWith("/") ? str.substring(1) : str;
+}
+
 /**
  * ボクセルの水平方向の辺と高さを計算する関数
  * @param {number} L - 全体範囲の水平一辺の長さ [m]
@@ -278,7 +282,7 @@ function App() {
           "_kind": "localSpace",
           "_lbl": "on",
           "zoom": localSpaceZoom,
-          "zfxy": space.zfxyStr,
+          "zfxy": removeFirstSlash(space.zfxyStr),
           "min_altitude": bbox[2],
           "max_altitude": bbox[5],
         },
@@ -306,7 +310,7 @@ function App() {
             "_kind": "boundingSpaceForDraw",
             "_lbl": "on",
             "id": feature.id + "-bounding-space",
-            "zfxy": localSpaceBounds.zfxyStr,
+            "zfxy": removeFirstSlash(localSpaceBounds.zfxyStr),
             "fill-color": "#f00",
           },
           "geometry": localSpaceBounds.toGeoJSON(),
@@ -499,7 +503,8 @@ function App() {
                 "_kind": "globalSpace",
                 "_lbl": "off",
                 "_selected": "on",
-                "zfxy": globalId.zfxyStr,
+                // NOTE: https://github.com/spatial-id/javascript-sdk 側で / が先頭についてたのでアプリ側で対応
+                "zfxy": removeFirstSlash(globalId.zfxyStr),
                 "min_altitude": globalId.altMin,
                 "max_altitude": globalId.altMax,
               },
@@ -540,7 +545,7 @@ function App() {
                 "_kind": "localSpace",
                 "_lbl": "off",
                 "zoom": localSpaceZoom,
-                "zfxy": localId.zfxyStr,
+                "zfxy": removeFirstSlash(localId.zfxyStr),
                 "min_altitude": bbox[2],
                 "max_altitude": bbox[5],
               },
@@ -595,7 +600,7 @@ function App() {
           "properties": {
             "_kind": "globalSpace",
             "_lbl": "off",
-            "zfxy": globalId.zfxyStr,
+            "zfxy": removeFirstSlash(globalId.zfxyStr),
           },
         });
       }
