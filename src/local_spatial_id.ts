@@ -243,6 +243,6 @@ export class LocalSpatialId {
 
   private _regenerateAttributesFromZFXY() {
     this.id = this.tilehash = generateTilehash(this.zfxy);
-    this.zfxyStr = `/${this.zfxy.z}/${this.zfxy.f}/${this.zfxy.x}/${this.zfxy.y}`;
+    this.zfxyStr = `${this.zfxy.z}/${this.zfxy.f}/${this.zfxy.x}/${this.zfxy.y}`;
   }
 }
